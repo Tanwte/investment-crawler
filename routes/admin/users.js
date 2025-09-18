@@ -287,9 +287,8 @@ router.post('/:id/reset-password', express.urlencoded({ extended: false }), asyn
       });
     }
 
-    // Reset the password using instance method
-    const userManager = new UserManager();
-    await userManager.updateUserPassword(user.username, new_password);
+    // Reset the password using static method
+    await UserManager.updateUserPassword(user.username, new_password);
 
     // Log the action
     await UserManager.logUserAction(req.session.user.id, 'RESET_PASSWORD_SUCCESS', {

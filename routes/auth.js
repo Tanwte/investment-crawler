@@ -4,8 +4,6 @@ const router = express.Router();
 const csurf = require('csurf');
 const UserManager = require('../utils/userManager');
 
-const userManager = new UserManager();
-
 // CSRF for auth forms
 router.use(csurf({ cookie: true }));
 
@@ -27,7 +25,7 @@ router.post('/login', express.urlencoded({ extended: false }), async (req, res) 
 
   try {
     // Attempt authentication with enhanced security
-    const authResult = await userManager.authenticateUser(
+    const authResult = await UserManager.authenticateUser(
       username, 
       password, 
       req.ip, 
@@ -39,7 +37,7 @@ router.post('/login', express.urlencoded({ extended: false }), async (req, res) 
       req.session.user = authResult.user;
       
       // Log successful login
-      await userManager.logUserAction(authResult.user.id, 'LOGIN_SUCCESS', {
+      await UserManager.logUserAction(authResult.user.id, 'LOGIN_SUCCESS', {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       });
@@ -58,9 +56,9 @@ router.post('/login', express.urlencoded({ extended: false }), async (req, res) 
     
     // Log the failed attempt if we can identify the user
     try {
-      const user = await userManager.getUserByUsername(username);
+      const user = await UserManager.getUserByUsername(username);
       if (user) {
-        await userManager.logUserAction(user.id, 'LOGIN_ERROR', {
+        await UserManager.logUserAction(user.id, 'LOGIN_ERROR', {
           error: error.message,
           ip: req.ip,
           userAgent: req.get('User-Agent')
@@ -82,7 +80,7 @@ router.post('/logout', express.urlencoded({ extended: false }), async (req, res)
   try {
     // Log logout action if user is authenticated
     if (req.session && req.session.user) {
-      await userManager.logUserAction(req.session.user.id, 'LOGOUT', {
+      await UserManager.logUserAction(req.session.user.id, 'LOGOUT', {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       });
