@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Audit Log - Investment Crawler Admin</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .audit-container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+        .audit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        .table th, .table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        .table th { background: #f8f9fa; font-weight: 600; position: sticky; top: 0; }
+        .action-badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .action-login { background: #d4edda; color: #155724; }
+        .action-logout { background: #f8d7da; color: #721c24; }
+        .action-create { background: #d1ecf1; color: #0c5460; }
+        .action-update { background: #fff3cd; color: #856404; }
+        .action-delete { background: #f8d7da; color: #721c24; }
+        .action-password { background: #e2e3e5; color: #383d41; }
+        .action-error { background: #f5c6cb; color: #721c24; }
+        .details-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .details-cell:hover { white-space: normal; overflow: visible; }
+        .filter-section { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .filter-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn-filter { background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-clear { background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; text-align: center; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #007bff; }
+        .pagination { text-align: center; margin-top: 20px; }
+        .pagination button { margin: 0 5px; padding: 8px 12px; border: 1px solid #ddd; background: white; cursor: pointer; }
+        .pagination button.active { background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>User Audit Log</h1>
+        <nav>
+            <a href="/admin/users">← Back to User Management</a>
+            <a href="/admin">Admin Dashboard</a>
+        </nav>
+    </header>
+
+    <div class="audit-container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number"><%= auditLog.length %></div>
+                <div>Total Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number"><%= auditLog.filter(log => log.action.includes('LOGIN')).length %></div>
+                <div>Login Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number"><%= auditLog.filter(log => log.action.includes('CREATE')).length %></div>
+                <div>User Created</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number"><%= auditLog.filter(log => log.action.includes('FAILED')).length %></div>
+                <div>Failed Actions</div>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <h3>Filter Audit Log</h3>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>User:</label>
+                    <select id="userFilter">
+                        <option value="">All Users</option>
+                        <% [...new Set(auditLog.map(log => log.username).filter(Boolean))].forEach(username => { %>
+                            <option value="<%= username %>"><%= username %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Action:</label>
+                    <select id="actionFilter">
+                        <option value="">All Actions</option>
+                        <% [...new Set(auditLog.map(log => log.action))].sort().forEach(action => { %>
+                            <option value="<%= action %>"><%= action %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Date From:</label>
+                    <input type="date" id="dateFromFilter">
+                </div>
+                <div class="filter-group">
+                    <label>Date To:</label>
+                    <input type="date" id="dateToFilter">
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <div>
+                        <button class="btn-filter" onclick="applyFilters()">Apply Filters</button>
+                        <button class="btn-clear" onclick="clearFilters()">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="table-container" style="max-height: 600px; overflow-y: auto;">
+                <table class="table" id="auditTable">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                            <th>IP Address</th>
+                            <th>User Agent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% auditLog.forEach(log => { %>
+                            <tr class="audit-row" 
+                                data-username="<%= log.username || '' %>" 
+                                data-action="<%= log.action %>" 
+                                data-date="<%= new Date(log.created_at).toISOString().split('T')[0] %>">
+                                <td>
+                                    <%= new Date(log.created_at).toLocaleString() %>
+                                </td>
+                                <td>
+                                    <strong><%= log.username || 'System' %></strong>
+                                </td>
+                                <td>
+                                    <span class="action-badge action-<%= log.action.toLowerCase().includes('login') ? 'login' : 
+                                                                        log.action.toLowerCase().includes('logout') ? 'logout' :
+                                                                        log.action.toLowerCase().includes('create') ? 'create' :
+                                                                        log.action.toLowerCase().includes('update') ? 'update' :
+                                                                        log.action.toLowerCase().includes('delete') ? 'delete' :
+                                                                        log.action.toLowerCase().includes('password') ? 'password' :
+                                                                        log.action.toLowerCase().includes('failed') ? 'error' : 'update' %>">
+                                        <%= log.action %>
+                                    </span>
+                                </td>
+                                <td class="details-cell">
+                                    <% if (log.details) { %>
+                                        <% try { %>
+                                            <% const details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details; %>
+                                            <div title="<%= JSON.stringify(details, null, 2) %>">
+                                                <% if (details.target_user) { %>
+                                                    Target: <%= details.target_user %><br>
+                                                <% } %>
+                                                <% if (details.error) { %>
+                                                    Error: <%= details.error %><br>
+                                                <% } %>
+                                                <% if (details.changes) { %>
+                                                    Changes: <%= Object.keys(details.changes).join(', ') %><br>
+                                                <% } %>
+                                                <% if (details.method) { %>
+                                                    Method: <%= details.method %><br>
+                                                <% } %>
+                                            </div>
+                                        <% } catch(e) { %>
+                                            <%= log.details %>
+                                        <% } %>
+                                    <% } else { %>
+                                        <em>No details</em>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <%= log.ip_address || 'N/A' %>
+                                </td>
+                                <td class="details-cell">
+                                    <% if (log.user_agent) { %>
+                                        <div title="<%= log.user_agent %>">
+                                            <%= log.user_agent.length > 50 ? log.user_agent.substring(0, 50) + '...' : log.user_agent %>
+                                        </div>
+                                    <% } else { %>
+                                        N/A
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <% if (auditLog.length === 0) { %>
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <p>No audit log entries found.</p>
+                </div>
+            <% } %>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 4px;">
+            <h3>About the Audit Log</h3>
+            <p>The audit log tracks all user-related activities in the system, including:</p>
+            <ul>
+                <li><strong>Authentication Events:</strong> Login attempts, logouts, failed logins</li>
+                <li><strong>User Management:</strong> User creation, updates, deletions, password resets</li>
+                <li><strong>Security Events:</strong> Account lockouts, unlock attempts, permission changes</li>
+                <li><strong>System Actions:</strong> Administrative actions and system events</li>
+            </ul>
+            <p><strong>Data Retention:</strong> Showing the last 100 events. Older events are automatically archived.</p>
+        </div>
+    </div>
+
+    <script>
+        function applyFilters() {
+            const userFilter = document.getElementById('userFilter').value.toLowerCase();
+            const actionFilter = document.getElementById('actionFilter').value.toLowerCase();
+            const dateFromFilter = document.getElementById('dateFromFilter').value;
+            const dateToFilter = document.getElementById('dateToFilter').value;
+            
+            const rows = document.querySelectorAll('.audit-row');
+            
+            rows.forEach(row => {
+                const username = row.dataset.username.toLowerCase();
+                const action = row.dataset.action.toLowerCase();
+                const date = row.dataset.date;
+                
+                let show = true;
+                
+                if (userFilter && !username.includes(userFilter)) show = false;
+                if (actionFilter && !action.includes(actionFilter)) show = false;
+                if (dateFromFilter && date < dateFromFilter) show = false;
+                if (dateToFilter && date > dateToFilter) show = false;
+                
+                row.style.display = show ? '' : 'none';
+            });
+            
+            updateVisibleCount();
+        }
+
+        function clearFilters() {
+            document.getElementById('userFilter').value = '';
+            document.getElementById('actionFilter').value = '';
+            document.getElementById('dateFromFilter').value = '';
+            document.getElementById('dateToFilter').value = '';
+            
+            const rows = document.querySelectorAll('.audit-row');
+            rows.forEach(row => row.style.display = '');
+            
+            updateVisibleCount();
+        }
+
+        function updateVisibleCount() {
+            const visibleRows = document.querySelectorAll('.audit-row:not([style*="display: none"])');
+            const totalRows = document.querySelectorAll('.audit-row');
+            
+            // You could add a counter here if needed
+            console.log(`Showing ${visibleRows.length} of ${totalRows.length} entries`);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default date range to last 30 days
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+            
+            document.getElementById('dateFromFilter').value = thirtyDaysAgo.toISOString().split('T')[0];
+            document.getElementById('dateToFilter').value = today.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>

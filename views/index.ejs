@@ -2,38 +2,281 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Results</title>
+  <title>Investment Crawler Results</title>
   <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .results-overview {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .summary-header {
+      background: #0f1630;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #203065;
+      text-align: center;
+    }
+    
+    .crawl-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .stat {
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 28px;
+      font-weight: bold;
+      color: #f5b042;
+      display: block;
+    }
+    
+    .stat-label {
+      color: #9ad;
+      font-size: 14px;
+    }
+    
+    .results-grid {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .result-card {
+      background: #0f1630;
+      border: 1px solid #203065;
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .result-card:hover {
+      background: #1a2a5a;
+      border-color: #3a4a78;
+      transform: translateY(-1px);
+    }
+    
+    .url-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .url-title {
+      font-weight: bold;
+      color: #e8eefc;
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+    
+    .url-domain {
+      color: #9ad;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    
+    .result-stats {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-left: 20px;
+    }
+    
+    .snippet-count {
+      background: #f5b042;
+      color: #0b1020;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 14px;
+      min-width: 60px;
+      text-align: center;
+    }
+    
+    .view-details {
+      background: #1a2a5a;
+      color: #e8eefc;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      border: 1px solid #3a4a78;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    
+    .view-details:hover {
+      background: #203065;
+      color: #fff;
+    }
+    
+    .no-results-card {
+      opacity: 0.6;
+    }
+    
+    .no-results-card .snippet-count {
+      background: #666;
+      color: #ccc;
+    }
+    
+    .skipped-reason {
+      color: #666;
+      font-style: italic;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+    
+    .empty-state h2 {
+      color: #9ad;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
   <header>
-    <h1>Results <small><%= query ? ('for ' + query) : '(latest crawl)' %></small></h1>
+    <h1>Investment Crawler <small><%= query ? ('for ' + query) : '(Latest Results)' %></small></h1>
     <nav>
+      <a href="/dashboard">📊 Dashboard</a>
       <a href="/admin">Admin</a>
       <a href="/search?q=investment">Search</a>
       <form method="POST" action="/logout" style="display:inline;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button>Logout</button>
       </form>
     </nav>
   </header>
 
-  <main>
+  <main class="results-overview">
     <% if (!results || results.length === 0) { %>
-      <p>No results yet.</p>
-    <% } %>
+      <div class="empty-state">
+        <h2>No crawl results yet</h2>
+        <p>Run a crawl from the Admin panel to see results here.</p>
+      </div>
+    <% } else { %>
+      <%
+        const totalPages = results.length;
+        const pagesWithContent = results.filter(r => r.data && r.data.length > 0).length;
+        const totalSnippets = results.reduce((sum, r) => sum + (r.data ? r.data.length : 0), 0);
+      %>
+      
+      <div class="summary-header">
+        <h2>Crawl Results Summary</h2>
+        <% if (crawlStats) { %>
+          <div class="crawl-session-info" style="margin-bottom: 15px; padding: 12px; background: rgba(0,120,204,0.2); border-radius: 6px;">
+            <strong>Session:</strong> <%= sessionId || 'Latest' %>
+            <% if (crawlStats.enabledDeepLinks) { %>
+              <span style="color: #4CAF50; margin-left: 10px;">🔗 Deep Links Enabled</span>
+            <% } %>
+            <% if (crawlStats.duration) { %>
+              <span style="color: #9ad; margin-left: 10px;">⏱️ <%= crawlStats.duration %>s</span>
+            <% } %>
+          </div>
+        <% } %>
+        
+        <div class="crawl-stats">
+          <div class="stat">
+            <span class="stat-number"><%= totalPages %></span>
+            <span class="stat-label">Pages Crawled</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number"><%= pagesWithContent %></span>
+            <span class="stat-label">With Content</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number"><%= totalSnippets %></span>
+            <span class="stat-label">Total Snippets</span>
+          </div>
+          <% if (crawlStats && crawlStats.enabledDeepLinks) { %>
+            <div class="stat">
+              <span class="stat-number"><%= crawlStats.totalUrls || totalPages %></span>
+              <span class="stat-label">URLs Discovered</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number"><%= crawlStats.totalDeepLinks || 0 %></span>
+              <span class="stat-label">Deep Articles</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number"><%= crawlStats.maxDepth || 2 %></span>
+              <span class="stat-label">Max Depth</span>
+            </div>
+          <% } %>
+        </div>
+        
+        <% if (crawlStats && crawlStats.enabledDeepLinks) { %>
+          <div style="margin-top: 15px; padding: 12px; background: rgba(76,175,80,0.1); border-radius: 6px; border: 1px solid rgba(76,175,80,0.3);">
+            <div style="color: #4CAF50; font-weight: bold; margin-bottom: 6px;">🚀 Enhanced Intelligence Mode</div>
+            <div style="font-size: 14px; color: #ccc;">
+              Deep link crawling extracted complete article content and metadata for comprehensive Singapore-Korea trade analysis.
+              <% if (crawlStats.totalDeepLinks > 0) { %>
+                Found <%= crawlStats.totalDeepLinks %> detailed articles with full text and metadata.
+              <% } %>
+            </div>
+          </div>
+        <% } %>
+      </div>
 
-    <% (results || []).forEach(r => { %>
-      <section class="card">
-        <h2>
-          <a href="<%= r.url %>" target="_blank" rel="noopener noreferrer"><%= r.url %></a>
-        </h2>
-        <ul>
-          <% r.data.forEach(d => { %>
-            <li><%= d %></li>
-          <% }) %>
-        </ul>
-      </section>
-    <% }) %>
+      <div class="results-grid">
+        <% results.forEach(r => { %>
+          <%
+            const hasContent = r.data && r.data.length > 0;
+            const snippetCount = r.data ? r.data.length : 0;
+            const urlObj = new URL(r.url);
+            const domain = urlObj.hostname;
+            const cardClass = hasContent ? 'result-card' : 'result-card no-results-card';
+          %>
+          
+          <div class="<%= cardClass %>">
+            <div class="url-info">
+              <div class="url-title"><%= r.url %></div>
+              <div class="url-domain"><%= domain %></div>
+              <% if (!hasContent && r.skipped) { %>
+                <div class="skipped-reason">
+                  <% if (r.skipped === 'robots') { %>
+                    Skipped due to robots.txt restrictions
+                  <% } else { %>
+                    <%= r.skipped %>
+                  <% } %>
+                </div>
+              <% } else if (!hasContent) { %>
+                <div class="skipped-reason">No keyword matches found</div>
+              <% } %>
+            </div>
+            
+            <div class="result-stats">
+              <div class="snippet-count"><%= snippetCount %></div>
+              <% if (hasContent) { %>
+                <a href="/results/detail?url=<%= encodeURIComponent(r.url) %>" 
+                   class="view-details">
+                  View Details →
+                </a>
+              <% } else { %>
+                <a href="<%= r.url %>" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="view-details">
+                  Visit Page →
+                </a>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
   </main>
 </body>
 </html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Detailed Results - <%= url %></title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .result-detail {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .source-header {
+      background: #1a2a5a;
+      padding: 16px 20px;
+      margin: 20px 0 0 0;
+      border-radius: 8px 8px 0 0;
+      border-left: 4px solid #f5b042;
+    }
+    
+    .source-url {
+      color: #9ad;
+      font-size: 18px;
+      font-weight: bold;
+      word-break: break-all;
+    }
+    
+    .keyword-section {
+      background: #0f1630;
+      border: 1px solid #203065;
+      margin: 0 0 20px 0;
+      border-radius: 0 0 8px 8px;
+    }
+    
+    .keyword-header {
+      background: #203065;
+      padding: 12px 20px;
+      border-bottom: 1px solid #3a4a78;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    .keyword-name {
+      color: #f5b042;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    
+    .match-count {
+      color: #9ad;
+      font-size: 14px;
+      margin-left: 10px;
+    }
+    
+    .snippets-container {
+      padding: 0;
+    }
+    
+    .snippet {
+      padding: 16px 20px;
+      border-bottom: 1px solid #203065;
+      line-height: 1.6;
+      position: relative;
+    }
+    
+    .snippet:last-child {
+      border-bottom: none;
+    }
+    
+    .snippet:hover {
+      background: #0b1528;
+    }
+    
+    .keyword-highlight {
+      background: #f5b042;
+      color: #0b1020;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+    
+    .snippet-number {
+      position: absolute;
+      right: 20px;
+      top: 16px;
+      color: #666;
+      font-size: 12px;
+      background: #0b1020;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    
+    .summary-stats {
+      background: #0f1630;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #203065;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    
+    .stat {
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #f5b042;
+      display: block;
+    }
+    
+    .stat-label {
+      color: #9ad;
+      font-size: 14px;
+    }
+    
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      padding: 8px 16px;
+      background: #1a2a5a;
+      color: #e8eefc;
+      text-decoration: none;
+      border-radius: 6px;
+      border: 1px solid #3a4a78;
+    }
+    
+    .back-link:hover {
+      background: #203065;
+    }
+    
+    .no-results {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Detailed Results</h1>
+    <nav>
+      <a href="/admin">Admin</a>
+      <a href="/search?q=investment">Search</a>
+      <a href="/">Back to Overview</a>
+      <form method="POST" action="/logout" style="display:inline;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button>Logout</button>
+      </form>
+    </nav>
+  </header>
+
+  <main class="result-detail">
+    <a href="/" class="back-link">← Back to Results Overview</a>
+    
+    <% if (!resultsByKeyword || Object.keys(resultsByKeyword).length === 0) { %>
+      <div class="no-results">
+        <h2>No results found for this URL</h2>
+        <p>This page either hasn't been crawled yet or no keyword matches were found.</p>
+      </div>
+    <% } else { %>
+      
+      <div class="summary-stats">
+        <div class="stat">
+          <span class="stat-number"><%= totalSnippets %></span>
+          <span class="stat-label">Total Snippets</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number"><%= Object.keys(resultsByKeyword).length %></span>
+          <span class="stat-label">Keywords Found</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number"><%= lastCrawled ? new Date(lastCrawled).toLocaleDateString() : 'Unknown' %></span>
+          <span class="stat-label">Last Crawled</span>
+        </div>
+      </div>
+
+      <div class="source-header">
+        <div class="source-url">
+          <a href="<%= url %>" target="_blank" rel="noopener noreferrer"><%= url %></a>
+        </div>
+      </div>
+
+      <div class="keyword-section">
+        <% Object.entries(resultsByKeyword).forEach(([keyword, snippets]) => { %>
+          <div class="keyword-header">
+            <span class="keyword-name"><%= keyword %></span>
+            <span class="match-count">(<%= snippets.length %> matches)</span>
+          </div>
+          <div class="snippets-container">
+            <% snippets.forEach((snippet, index) => { %>
+              <div class="snippet">
+                <span class="snippet-number">#<%= index + 1 %></span>
+                <div><%- snippet.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), `<span class="keyword-highlight">${keyword}</span>`) %></div>
+              </div>
+            <% }) %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </main>
+</body>
+</html>

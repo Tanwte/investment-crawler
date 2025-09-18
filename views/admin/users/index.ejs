@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Investment Crawler Admin</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .users-container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        .users-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-primary { background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; }
+        .btn-secondary { background: #6c757d; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 12px; }
+        .btn-warning { background: #ffc107; color: #212529; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 12px; }
+        .btn-danger { background: #dc3545; color: white; padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-inactive { background: #f8d7da; color: #721c24; }
+        .status-locked { background: #fff3cd; color: #856404; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .table th { background: #f8f9fa; font-weight: 600; }
+        .actions { display: flex; gap: 5px; }
+        .alert { padding: 12px; margin-bottom: 20px; border-radius: 4px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>User Management</h1>
+        <nav>
+            <a href="/admin">← Back to Admin Dashboard</a>
+            <a href="/admin/users/audit-log">View Audit Log</a>
+        </nav>
+    </header>
+
+    <div class="users-container">
+        <!-- Success/Error Messages -->
+        <% if (typeof created !== 'undefined') { %>
+            <div class="alert alert-success">
+                User "<%= created %>" has been created successfully.
+            </div>
+        <% } %>
+        
+        <% if (typeof updated !== 'undefined') { %>
+            <div class="alert alert-success">
+                User "<%= updated %>" has been updated successfully.
+            </div>
+        <% } %>
+        
+        <% if (typeof deleted !== 'undefined') { %>
+            <div class="alert alert-warning">
+                User has been deleted successfully.
+            </div>
+        <% } %>
+        
+        <% if (typeof password_reset !== 'undefined') { %>
+            <div class="alert alert-success">
+                Password has been reset for user "<%= password_reset %>".
+            </div>
+        <% } %>
+        
+        <% if (typeof unlocked !== 'undefined') { %>
+            <div class="alert alert-success">
+                User account has been unlocked successfully.
+            </div>
+        <% } %>
+
+        <div class="users-header">
+            <h2>System Users</h2>
+            <a href="/admin/users/create" class="btn-primary">+ Create New User</a>
+        </div>
+
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% users.forEach(u => { %>
+                        <tr>
+                            <td><%= u.id %></td>
+                            <td><strong><%= u.username %></strong></td>
+                            <td><%= u.full_name || 'N/A' %></td>
+                            <td><%= u.email || 'N/A' %></td>
+                            <td><span class="status-badge <%= u.role === 'admin' ? 'status-locked' : 'status-active' %>"><%= u.role.toUpperCase() %></span></td>
+                            <td>
+                                <% if (u.account_locked) { %>
+                                    <span class="status-badge status-locked">LOCKED</span>
+                                <% } else if (u.is_active) { %>
+                                    <span class="status-badge status-active">ACTIVE</span>
+                                <% } else { %>
+                                    <span class="status-badge status-inactive">INACTIVE</span>
+                                <% } %>
+                            </td>
+                            <td>
+                                <% if (u.last_login) { %>
+                                    <%= new Date(u.last_login).toLocaleDateString() %><br>
+                                    <small><%= new Date(u.last_login).toLocaleTimeString() %></small>
+                                <% } else { %>
+                                    Never
+                                <% } %>
+                            </td>
+                            <td>
+                                <%= new Date(u.created_at).toLocaleDateString() %><br>
+                                <small><%= new Date(u.created_at).toLocaleTimeString() %></small>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <a href="/admin/users/<%= u.id %>/edit" class="btn-secondary">Edit</a>
+                                    <a href="/admin/users/<%= u.id %>/reset-password" class="btn-warning">Reset Password</a>
+                                    
+                                    <% if (u.account_locked) { %>
+                                        <form method="POST" action="/admin/users/<%= u.id %>/unlock" style="display: inline;">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <button type="submit" class="btn-secondary">Unlock</button>
+                                        </form>
+                                    <% } %>
+                                    
+                                    <% if (u.id !== user.id) { %>
+                                        <form method="POST" action="/admin/users/<%= u.id %>/delete" style="display: inline;">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <button type="submit" class="btn-danger" onclick="return confirm('Are you sure you want to delete user \'<%= u.username %>\'? This action cannot be undone.')">Delete</button>
+                                        </form>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+            
+            <% if (users.length === 0) { %>
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <p>No users found.</p>
+                    <a href="/admin/users/create" class="btn-primary">Create the first user</a>
+                </div>
+            <% } %>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 4px;">
+            <h3>User Management Statistics</h3>
+            <div style="display: flex; gap: 30px;">
+                <div>
+                    <strong>Total Users:</strong> <%= users.length %>
+                </div>
+                <div>
+                    <strong>Active Users:</strong> <%= users.filter(u => u.is_active).length %>
+                </div>
+                <div>
+                    <strong>Admin Users:</strong> <%= users.filter(u => u.role === 'admin').length %>
+                </div>
+                <div>
+                    <strong>Locked Accounts:</strong> <%= users.filter(u => u.account_locked).length %>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

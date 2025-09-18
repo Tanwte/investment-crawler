@@ -1,5 +1,6 @@
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Admin</title><link rel="stylesheet" href="/styles.css"></head>
 <body><header><h1>Admin</h1><nav>
+<a href="/dashboard">📊 Dashboard</a>
 <a href="/admin/keywords">Edit Keywords</a>
 <a href="/admin/urls">Edit URLs</a>
 <a href="/admin/users">Users</a>
@@ -10,4 +11,67 @@
 <p>Signed in as: <strong><%= me.username %></strong> (<%= me.role %>)</p>
 <p>Keywords: <strong><%= keywordsCount %></strong></p>
 <p>Seed URLs: <strong><%= urlsCount %></strong> (min <%= minUrls %>, max <%= maxUrls %>)</p>
-</main></body></html>
+</main>
+<section class="card" style="max-width:720px;margin:16px auto;">
+  <h2>Run Crawl</h2>
+  <p>Triggers the crawler now. This action is rate-limited and may take a while to finish.</p>
+  <form method="POST" action="/crawl">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    
+    <div style="margin-bottom: 16px;">
+      <h3>Crawl Options</h3>
+      
+      <div style="margin-bottom: 12px;">
+        <label>
+          <input type="checkbox" name="deepLinks" value="true" checked> 
+          Enable Deep Link Crawling
+        </label>
+        <small style="display: block; color: #666; margin-top: 4px;">
+          Follow article links to extract complete content (recommended for comprehensive intelligence gathering)
+        </small>
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <label for="maxDepth">Max Crawl Depth:</label>
+        <select name="maxDepth" id="maxDepth" style="margin-left: 8px;">
+          <option value="1">1 level (seed URLs only)</option>
+          <option value="2" selected>2 levels (recommended)</option>
+          <option value="3">3 levels (thorough)</option>
+          <option value="4">4 levels (extensive)</option>
+        </select>
+        <small style="display: block; color: #666; margin-top: 4px;">
+          How many link levels to follow from seed URLs
+        </small>
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <label for="maxLinksPerPage">Links per page:</label>
+        <select name="maxLinksPerPage" id="maxLinksPerPage" style="margin-left: 8px;">
+          <option value="3">3 links</option>
+          <option value="5" selected>5 links (recommended)</option>
+          <option value="10">10 links</option>
+          <option value="15">15 links (intensive)</option>
+        </select>
+        <small style="display: block; color: #666; margin-top: 4px;">
+          Maximum relevant links to follow from each page
+        </small>
+      </div>
+    </div>
+    
+    <button type="submit" style="background: #007acc; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer;">
+      Run Crawl Now
+    </button>
+  </form>
+  
+  <div style="margin-top: 16px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
+    <h4 style="margin: 0 0 8px 0;">Deep Link Intelligence:</h4>
+    <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #666;">
+      <li>Extracts complete article content beyond headlines</li>
+      <li>Follows related news and analysis links</li>
+      <li>Captures metadata (author, date, publication)</li>
+      <li>Ideal for Singapore-Korea trade relationship monitoring</li>
+      <li>Respects robots.txt and implements polite crawling</li>
+    </ul>
+  </div>
+</section>
+</body></html>

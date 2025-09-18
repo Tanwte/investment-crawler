@@ -11,7 +11,18 @@ const KEYWORDS_PATH = path.join(__dirname, '..', 'data', 'keywords.json');
 let state = { urls: [], keywords: [], lastLoad: null };
 
 function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  try {
+    const content = fs.readFileSync(filePath, 'utf8').trim();
+    if (!content) {
+      console.warn(`Warning: ${filePath} is empty, returning empty array`);
+      return [];
+    }
+    return JSON.parse(content);
+  } catch (error) {
+    console.error(`Error reading ${filePath}:`, error.message);
+    // Return empty array as fallback
+    return [];
+  }
 }
 function normalizeKeyword(k) { return String(k || '').trim(); }
 function normalizeUrl(u) { return String(u || '').trim(); }
@@ -30,8 +41,21 @@ function validateAndLoad() {
     urlSet.add(u);
     urls.push(u);
   }
-  if (urls.length < MIN_URLS) throw new Error(`urls.json must contain at least ${MIN_URLS} URLs (got ${urls.length})`);
-  if (urls.length > MAX_URLS) throw new Error(`urls.json must not exceed ${MAX_URLS} (got ${urls.length})`);
+  if (urls.length < MIN_URLS) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`Warning: urls.json contains ${urls.length} URLs (minimum ${MIN_URLS} required for production)`);
+      // In development, allow empty URLs for admin panel access
+    } else {
+      throw new Error(`urls.json must contain at least ${MIN_URLS} URLs (got ${urls.length})`);
+    }
+  }
+  if (urls.length > MAX_URLS) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`Warning: urls.json contains ${urls.length} URLs (maximum ${MAX_URLS} recommended)`);
+    } else {
+      throw new Error(`urls.json must not exceed ${MAX_URLS} (got ${urls.length})`);
+    }
+  }
 
   // Keywords: non-empty, case-insensitive unique
   const kwSet = new Set();

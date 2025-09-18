@@ -1,7 +1,6 @@
 // routes/admin.js
 const express = require('express');
 const router = express.Router();
-const cookieParser = require('cookie-parser');
 const csurf = require('csurf');
 const pool = require('../db');
 const { writeJsonAtomic } = require('../utils/jsonStore');
@@ -12,10 +11,23 @@ const {
 } = require('../utils/seeds');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
+// Import user management routes
+const userRoutes = require('./admin/users');
+
+// Add middleware to prevent caching of admin pages
+router.use((req, res, next) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 router.use(requireAuth);
-router.use(cookieParser());
 router.use(csurf({ cookie: true }));
 router.use((req, res, next) => { res.locals.csrfToken = req.csrfToken(); next(); });
+
+// Mount user management routes
+router.use('/admin/users', userRoutes);
 
 // Admin home
 router.get('/admin', (req, res) => {
@@ -30,40 +42,50 @@ router.get('/admin', (req, res) => {
 
 /* Keywords */
 router.get('/admin/keywords', requireAdmin, (req, res) => {
-  res.render('admin_keywords', { currentText: getKeywords().join('\n') });
+  // Get and clear any flash message from session
+  const success = req.session.flashMessage || null;
+  delete req.session.flashMessage;
+  res.render('admin_keywords', { currentText: getKeywords().join('\n'), error: null, success });
 });
 router.post('/admin/keywords', requireAdmin, express.urlencoded({ extended: false }), (req, res) => {
   const raw = String(req.body.keywords || '');
   const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const seen = new Set(), clean = [];
   for (const k of lines) { const key = k.toLowerCase(); if (seen.has(key)) continue; seen.add(key); clean.push(k); }
-  if (clean.length === 0) return res.status(422).render('admin_keywords', { currentText: raw, error: 'At least one keyword' });
+  if (clean.length === 0) return res.status(422).render('admin_keywords', { currentText: raw, error: 'At least one keyword', success: null });
   try {
     writeJsonAtomic(KEYWORDS_PATH, clean);
     reloadSeeds();
-    res.render('admin_keywords', { currentText: clean.join('\n'), success: `Saved ${clean.length} keyword(s).` });
+    // Store success message in session and redirect
+    req.session.flashMessage = `Saved ${clean.length} keyword(s).`;
+    res.redirect('/admin/keywords');
   } catch (e) {
-    res.status(422).render('admin_keywords', { currentText: raw, error: e.message });
+    res.status(422).render('admin_keywords', { currentText: raw, error: e.message, success: null });
   }
 });
 
 /* URLs */
 router.get('/admin/urls', requireAdmin, (req, res) => {
-  res.render('admin_urls', { currentText: getUrls().join('\n'), min: MIN_URLS, max: MAX_URLS });
+  // Get and clear any flash message from session
+  const success = req.session.flashMessage || null;
+  delete req.session.flashMessage;
+  res.render('admin_urls', { currentText: getUrls().join('\n'), min: MIN_URLS, max: MAX_URLS, error: null, success });
 });
 router.post('/admin/urls', requireAdmin, express.urlencoded({ extended: false }), (req, res) => {
   const raw = String(req.body.urls || '');
   const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const seen = new Set(), clean = [];
   for (const u of lines) { if (!isSafeHttpUrl(u)) continue; if (seen.has(u)) continue; seen.add(u); clean.push(u); }
-  if (clean.length < MIN_URLS) return res.status(422).render('admin_urls', { currentText: raw, min: MIN_URLS, max: MAX_URLS, error: `Need >=${MIN_URLS} URLs` });
-  if (clean.length > MAX_URLS) return res.status(422).render('admin_urls', { currentText: raw, min: MIN_URLS, max: MAX_URLS, error: `Need <=${MAX_URLS} URLs` });
+  if (clean.length < MIN_URLS) return res.status(422).render('admin_urls', { currentText: raw, min: MIN_URLS, max: MAX_URLS, error: `Need >=${MIN_URLS} URLs`, success: null });
+  if (clean.length > MAX_URLS) return res.status(422).render('admin_urls', { currentText: raw, min: MIN_URLS, max: MAX_URLS, error: `Need <=${MAX_URLS} URLs`, success: null });
   try {
     writeJsonAtomic(URLS_PATH, clean);
     reloadSeeds();
-    res.render('admin_urls', { currentText: clean.join('\n'), min: MIN_URLS, max: MAX_URLS, success: `Saved ${clean.length} URL(s).` });
+    // Store success message in session and redirect
+    req.session.flashMessage = `Saved ${clean.length} URL(s).`;
+    res.redirect('/admin/urls');
   } catch (e) {
-    res.status(422).render('admin_urls', { currentText: raw, min: MIN_URLS, max: MAX_URLS, error: e.message });
+    res.status(422).render('admin_urls', { currentText: raw, min: MIN_URLS, max: MAX_URLS, error: e.message, success: null });
   }
 });
 
