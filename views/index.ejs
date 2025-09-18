@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Results</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Results <small><%= query ? ('for ' + query) : '(latest crawl)' %></small></h1>
+    <nav>
+      <a href="/admin">Admin</a>
+      <a href="/search?q=investment">Search</a>
+      <form method="POST" action="/logout" style="display:inline;">
+        <button>Logout</button>
+      </form>
+    </nav>
+  </header>
+
+  <main>
+    <% if (!results || results.length === 0) { %>
+      <p>No results yet.</p>
+    <% } %>
+
+    <% (results || []).forEach(r => { %>
+      <section class="card">
+        <h2>
+          <a href="<%= r.url %>" target="_blank" rel="noopener noreferrer"><%= r.url %></a>
+        </h2>
+        <ul>
+          <% r.data.forEach(d => { %>
+            <li><%= d %></li>
+          <% }) %>
+        </ul>
+      </section>
+    <% }) %>
+  </main>
+</body>
+</html>

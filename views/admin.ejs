@@ -1,0 +1,13 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Admin</title><link rel="stylesheet" href="/styles.css"></head>
+<body><header><h1>Admin</h1><nav>
+<a href="/admin/keywords">Edit Keywords</a>
+<a href="/admin/urls">Edit URLs</a>
+<a href="/admin/users">Users</a>
+<a href="/admin/settings">Settings</a>
+<form method="POST" action="/logout" style="display:inline;"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button>Logout</button></form>
+</nav></header>
+<main class="card" style="max-width:720px;margin:16px auto;">
+<p>Signed in as: <strong><%= me.username %></strong> (<%= me.role %>)</p>
+<p>Keywords: <strong><%= keywordsCount %></strong></p>
+<p>Seed URLs: <strong><%= urlsCount %></strong> (min <%= minUrls %>, max <%= maxUrls %>)</p>
+</main></body></html>
