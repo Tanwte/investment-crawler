@@ -1,7 +1,9 @@
 // utils/deepLinkCrawler.js - Deep link crawling for complete article extraction
 const url = require('url');
+const axios = require('axios');
 const cheerioScraper = require('../crawlers/cheerioScraper');
 const puppeteerScraper = require('../crawlers/enhancedPuppeteerScraper');
+const smartScraper = require('./smartScraper');
 const { randomDelay } = require('./stealthConfig');
 
 class DeepLinkCrawler {
@@ -13,186 +15,122 @@ class DeepLinkCrawler {
     this.respectRobots = options.respectRobots !== false;
     this.domainWhitelist = options.domainWhitelist || [];
     this.linkPatterns = options.linkPatterns || this.getDefaultLinkPatterns();
+    this.targetKeywords = [];
   }
 
   getDefaultLinkPatterns() {
     return [
-      // Korean news patterns
-      /news|article|기사|뉴스|보도/i,
-      /press|보도자료|프레스/i,
-      /investment|투자|펀드/i,
-      /economy|경제|금융/i,
-      /trade|무역|수출|수입/i,
-      /singapore|싱가포르/i,
-      /asean|아세안|동남아/i,
-      /cooperation|협력|협정/i,
+      // Content type patterns
+      /article|news|post|story|blog|page/i,
+      /analysis|research|report|study|review/i,
+      /profile|biography|about|overview/i,
+      /press|announcement|release|statement/i,
+      /guide|tutorial|how.*to|explainer/i,
+      /policy|strategy|plan|initiative|program/i,
       
-      // URL path patterns
-      /\/news\//i,
-      /\/article\//i,
-      /\/press\//i,
-      /\/economy\//i,
-      /\/business\//i,
-      /\/finance\//i,
-      /\/investment\//i,
-      /\/trade\//i,
-      /\/international\//i,
-      /\/global\//i,
+      // Korean content patterns
+      /기사|뉴스|보도|소식/i,
+      /분석|연구|리포트|조사/i,
+      /투자|경제|금융|무역/i,
+      /정책|전략|계획|협력/i,
       
-      // Date patterns (recent articles)
-      /\/20(24|25|26)\//,
-      /\/(0[1-9]|1[0-2])\//,
-      
-      // Article ID patterns
-      /articleid|newsid|id=/i,
-      /\/\d{6,}/
+      // URL path patterns (generic)
+      /\/news\/|\/article\/|\/post\/|\/story\//i,
+      /\/press\/|\/announcement\/|\/release\//i,
+      /\/\d{4}\/\d{2}\/|\/\d{4}-\d{2}-/i // Date patterns in URLs
     ];
   }
 
-  // Extract potential article links from a page
-  extractArticleLinks($, baseUrl) {
-    const links = new Set();
-    const selectors = [
-      'a[href*="news"]',
-      'a[href*="article"]',
-      'a[href*="press"]',
-      'a[href*="기사"]',
-      'a[href*="뉴스"]',
-      'a[href*="보도"]',
-      '.news-list a',
-      '.article-list a',
-      '.headline a',
-      '.news-title a',
-      '.article-title a',
-      '[class*="news"] a',
-      '[class*="article"] a',
-      '[class*="headline"] a'
-    ];
+  // Main deep crawling method with enhanced keyword integration
+  async crawlWithDeepLinks(startUrl, keywords = [], currentDepth = 0) {
+    // Set keywords for this crawl session
+    this.setTargetKeywords(keywords);
+    console.log(`[DEEP] 🎯 Starting deep crawl from: ${startUrl} (depth: ${currentDepth})`);
+    console.log(`[DEEP] 🔍 Target keywords: ${keywords.join(', ')}`);
 
-    // Extract links using multiple selectors
-    selectors.forEach(selector => {
-      $(selector).each((i, el) => {
-        const href = $(el).attr('href');
-        if (href) {
-          try {
-            const absoluteUrl = url.resolve(baseUrl, href);
-            const linkText = $(el).text().trim();
-            
-            // Check if link matches our patterns
-            if (this.isRelevantLink(absoluteUrl, linkText)) {
-              links.add(absoluteUrl);
-            }
-          } catch (error) {
-            // Skip invalid URLs
-          }
-        }
-      });
-    });
-
-    // Also check for links in article previews and teasers
-    $('[class*="preview"], [class*="teaser"], [class*="summary"]').each((i, el) => {
-      $(el).find('a').each((j, linkEl) => {
-        const href = $(linkEl).attr('href');
-        if (href) {
-          try {
-            const absoluteUrl = url.resolve(baseUrl, href);
-            const linkText = $(linkEl).text().trim();
-            
-            if (this.isRelevantLink(absoluteUrl, linkText)) {
-              links.add(absoluteUrl);
-            }
-          } catch (error) {
-            // Skip invalid URLs
-          }
-        }
-      });
-    });
-
-    return Array.from(links).slice(0, this.maxLinksPerPage);
-  }
-
-  // Check if a link is relevant for crawling
-  isRelevantLink(linkUrl, linkText) {
-    try {
-      const urlObj = new URL(linkUrl);
-      
-      // Skip non-HTTP(S) links
-      if (!urlObj.protocol.startsWith('http')) {
-        return false;
-      }
-
-      // Check domain whitelist if specified
-      if (this.domainWhitelist.length > 0) {
-        const allowed = this.domainWhitelist.some(domain => 
-          urlObj.hostname.includes(domain)
-        );
-        if (!allowed) return false;
-      }
-
-      // Skip already visited URLs
-      if (this.visitedUrls.has(linkUrl)) {
-        return false;
-      }
-
-      // Check URL patterns
-      const urlMatches = this.linkPatterns.some(pattern => 
-        pattern.test(linkUrl) || pattern.test(linkText)
-      );
-
-      // Additional checks for Korean content
-      const hasKoreanKeywords = /투자|경제|무역|뉴스|기사|보도|협력|싱가포르|아세안|동남아/.test(linkText);
-      
-      // Check for Singapore/ASEAN related content
-      const hasSingaporeContent = /singapore|asean|sea|southeast.*asia/i.test(linkText);
-      
-      return urlMatches || hasKoreanKeywords || hasSingaporeContent;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  // Crawl a page and extract deep links
-  async crawlWithDeepLinks(startUrl, keywords, currentDepth = 0) {
-    if (currentDepth >= this.maxDepth) {
+    if (currentDepth > this.maxDepth) {
+      console.log(`[DEEP] ⚠️ Max depth ${this.maxDepth} exceeded, stopping`);
       return { results: [], links: [] };
     }
 
     if (this.visitedUrls.has(startUrl)) {
+      console.log(`[DEEP] 🔄 Already visited: ${startUrl}`);
       return { results: [], links: [] };
     }
 
     this.visitedUrls.add(startUrl);
-    
-    console.log(`[DEEP] Crawling depth ${currentDepth}: ${startUrl}`);
+    console.log(`[DEEP] ➕ Added to visited: ${startUrl} (total: ${this.visitedUrls.size})`);
 
     try {
-      // First, scrape the main page
-      let mainResult;
-      try {
-        mainResult = await cheerioScraper(startUrl, keywords);
-      } catch (error) {
-        console.log(`[DEEP] Cheerio failed for ${startUrl}, trying Puppeteer`);
-        mainResult = await puppeteerScraper(startUrl, keywords);
-      }
-
-      const results = [mainResult];
+      const results = [];
       const allLinks = [];
 
-      // If we found content or this is the first level, look for deeper links
-      if (mainResult.mentions.length > 0 || currentDepth === 0) {
-        // Add delay between requests
-        await randomDelay(this.crawlDelay);
+      // Extract content from current page using smart scraper
+      console.log(`[DEEP] 📄 Extracting content from: ${startUrl}`);
+      const pageResult = await smartScraper.scrape(startUrl, keywords);
+      
+      if (pageResult && pageResult.data && pageResult.data.length > 0) {
+        console.log(`[DEEP] ✅ Crawling depth ${currentDepth}: ${startUrl}`);
+        console.log(`[DEEP] 🎯 Enhanced matching: ${pageResult.data.length} mentions found`);
+        // Convert smartScraper format to expected format
+        const convertedResult = {
+          url: startUrl,
+          mentions: pageResult.data,
+          isDeepLink: currentDepth > 0,
+          crawlDepth: currentDepth,
+          scraper: pageResult.scraper
+        };
+        results.push(convertedResult);
+      } else {
+        console.log(`[DEEP] ❌ No relevant content found at: ${startUrl}`);
+      }
 
-        // Extract links from the page content
-        const cheerio = require('cheerio');
-        const $ = cheerio.load(mainResult.html || '');
-        const articleLinks = this.extractArticleLinks($, startUrl);
+      // Find article links on the current page if not at max depth
+      if (currentDepth < this.maxDepth) {
+        console.log(`[DEEP] 🔗 Looking for article links on: ${startUrl}`);
+        let articleLinks = await this.findArticleLinks(startUrl);
         
         console.log(`[DEEP] Found ${articleLinks.length} potential article links at depth ${currentDepth}`);
+        
+        // Filter for keyword relevance and visited URLs
+        if (keywords && keywords.length > 0) {
+          console.log(`[DEEP] 🔍 Filtering links for keywords: ${keywords.join(', ')}`);
+          
+          const filteredLinks = [];
+          let skippedVisited = 0;
+          let skippedIrrelevant = 0;
+          
+          articleLinks.forEach(link => {
+            // Check if already visited
+            if (this.visitedUrls.has(link)) {
+              skippedVisited++;
+              console.log(`[DEEP] 🔄 Skip visited: ${link}`);
+              return;
+            }
+            
+            // Check keyword relevance
+            const hasKeywords = this.containsTargetKeywords(link, '');
+            const isWikipediaRelevant = this.isWikipediaRelevantLink(link, '');
+            
+            if (hasKeywords || isWikipediaRelevant) {
+              filteredLinks.push(link);
+              const reason = hasKeywords ? 'contains keywords' : 'Wikipedia relevant';
+              console.log(`[DEEP] ✅ Include: ${link} (${reason})`);
+            } else {
+              skippedIrrelevant++;
+              console.log(`[DEEP] ❌ Skip irrelevant: ${link}`);
+            }
+          });
+          
+          console.log(`[DEEP] 📊 Filtering results: ${filteredLinks.length} included, ${skippedVisited} visited, ${skippedIrrelevant} irrelevant`);
+          articleLinks = filteredLinks;
+        }
+        
         allLinks.push(...articleLinks);
+        console.log(`[DEEP] Added ${articleLinks.length} new URLs to queue`);
 
-        // Crawl article links if we haven't reached max depth
-        if (currentDepth < this.maxDepth - 1) {
+        // Crawl article links if we haven't exceeded max depth
+        if (currentDepth + 1 <= this.maxDepth && articleLinks.length > 0) {
           for (const linkUrl of articleLinks.slice(0, 5)) { // Limit concurrent crawls
             try {
               await randomDelay(this.crawlDelay);
@@ -227,14 +165,8 @@ class DeepLinkCrawler {
       // Try Cheerio first for speed
       let result = await cheerioScraper(url, keywords);
       
-      // If no content found, use Puppeteer for dynamic content
-      if (!result.mentions || result.mentions.length === 0) {
-        console.log(`[DEEP] No content with Cheerio, trying Puppeteer for: ${url}`);
-        result = await puppeteerScraper(url, keywords);
-      }
-
-      // Enhanced content extraction for articles
-      if (result.html) {
+      if (result && result.length > 0) {
+        // Enhanced processing
         const cheerio = require('cheerio');
         const $ = cheerio.load(result.html);
         
@@ -314,18 +246,345 @@ class DeepLinkCrawler {
     return bodyContent.text().trim();
   }
 
+  // Find article links on a given page
+  async findArticleLinks(pageUrl) {
+    try {
+      const response = await axios.get(pageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 10000
+      });
+
+      const cheerio = require('cheerio');
+      const $ = cheerio.load(response.data);
+      
+      const links = new Set();
+      const baseUrl = new URL(pageUrl);
+
+      // Enhanced link discovery specifically for Wikipedia
+      if (pageUrl.includes('wikipedia.org')) {
+        // Focus on main content area links
+        $('#mw-content-text a[href^="/wiki/"]:not([href*=":"]):not([href*="#"])').each((i, element) => {
+          const href = $(element).attr('href');
+          const linkText = $(element).text().trim();
+          
+          if (href && !href.includes(':') && !href.includes('#')) {
+            try {
+              const absoluteUrl = new URL(href, baseUrl).toString();
+              
+              // Skip file/media links
+              if (this.isNonContentUrl(absoluteUrl)) {
+                return;
+              }
+
+              // For Wikipedia, be more permissive with content links
+              links.add(absoluteUrl);
+              
+            } catch (error) {
+              // Skip invalid URLs
+            }
+          }
+        });
+      } else {
+        // Original logic for non-Wikipedia sites
+        $('a[href]').each((i, element) => {
+          const href = $(element).attr('href');
+          const linkText = $(element).text().trim();
+          
+          if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:')) {
+            return;
+          }
+
+          try {
+            const absoluteUrl = new URL(href, baseUrl).toString();
+            
+            // Skip non-content URLs
+            if (this.isNonContentUrl(absoluteUrl)) {
+              return;
+            }
+
+            // Apply various filtering strategies
+            if (this.isRelevantLink(absoluteUrl, linkText)) {
+              links.add(absoluteUrl);
+            }
+            
+          } catch (error) {
+            // Skip invalid URLs
+          }
+        });
+      }
+
+      const allLinks = Array.from(links);
+      console.log(`[DEEP] 📋 Found ${allLinks.length} total links on ${pageUrl}`);
+      
+      // Prioritize keyword-relevant links first
+      if (this.targetKeywords && this.targetKeywords.length > 0) {
+        const keywordLinks = [];
+        const otherLinks = [];
+        
+        allLinks.forEach(link => {
+          const hasKeywords = this.containsTargetKeywords(link, '');
+          
+          // Only prioritize links that actually contain our target keywords
+          if (hasKeywords) {
+            keywordLinks.push(link);
+          } else {
+            otherLinks.push(link);
+          }
+        });
+        
+        // Sort keyword links to prioritize exact keyword matches first
+        keywordLinks.sort((a, b) => {
+          // Safety checks
+          if (!a || !b) return 0;
+          
+          // Prioritize multi-word keywords (like "Lee Kuan Yew") over single words (like "Singapore")
+          const aHasMultiWordKeyword = this.targetKeywords.some(keyword => 
+            keyword.includes(' ') && this.containsTargetKeywords(a, '')
+          );
+          const bHasMultiWordKeyword = this.targetKeywords.some(keyword => 
+            keyword.includes(' ') && this.containsTargetKeywords(b, '')
+          );
+          
+          // Check specifically for each keyword to determine priority
+          let aPriority = 0;
+          let bPriority = 0;
+          
+          this.targetKeywords.forEach((keyword, index) => {
+            if (this.containsTargetKeywords(a, '') && 
+                `${a} `.toLowerCase().includes(keyword.toLowerCase().replace(/\s+/g, '_'))) {
+              aPriority = keyword.includes(' ') ? 100 - index : 50 - index;
+            }
+            if (this.containsTargetKeywords(b, '') && 
+                `${b} `.toLowerCase().includes(keyword.toLowerCase().replace(/\s+/g, '_'))) {
+              bPriority = keyword.includes(' ') ? 100 - index : 50 - index;
+            }
+          });
+          
+          // Higher priority comes first
+          if (aPriority !== bPriority) {
+            return bPriority - aPriority;
+          }
+          
+          return 0;
+        });
+        
+        // Return keyword links first, then fill up to maxLinksPerPage with others
+        const prioritizedLinks = [...keywordLinks, ...otherLinks];
+        
+        // If we have target keywords, only return links that actually contain them
+        // Don't fill with irrelevant links
+        if (keywordLinks.length > 0) {
+          return keywordLinks.slice(0, this.maxLinksPerPage);
+        }
+        
+        // If no keyword links found, fall back to returning prioritized links
+        return prioritizedLinks.slice(0, this.maxLinksPerPage);
+      }
+      
+      return allLinks.slice(0, this.maxLinksPerPage);
+      
+    } catch (error) {
+      console.error(`[DEEP] Error finding links on ${pageUrl}:`, error.message);
+      return [];
+    }
+  }
+
+  // Enhanced link relevance checking
+  isRelevantLink(linkUrl, linkText) {
+    // Check against link patterns
+    const hasRelevantPattern = this.linkPatterns.some(pattern => 
+      pattern.test(linkUrl) || pattern.test(linkText)
+    );
+
+    // Check domain whitelist if specified
+    if (this.domainWhitelist.length > 0) {
+      try {
+        const linkDomain = new URL(linkUrl).hostname;
+        const isWhitelisted = this.domainWhitelist.some(domain => 
+          linkDomain.includes(domain) || domain.includes(linkDomain)
+        );
+        
+        return hasRelevantPattern && isWhitelisted;
+      } catch {
+        return false;
+      }
+    }
+
+    // General content relevance check
+    const hasRelevantContent = this.hasRelevantContent(linkText);
+    
+    // Keyword relevance if keywords are set
+    const hasKeywords = this.containsTargetKeywords(linkUrl, linkText);
+    
+    // Wikipedia specific relevance
+    const isWikipediaRelevant = this.isWikipediaRelevantLink(linkUrl, linkText);
+
+    return hasRelevantPattern || hasRelevantContent || hasKeywords || isWikipediaRelevant;
+  }
+
   // Get crawl statistics
   getStats() {
+    const visitedStats = this.getVisitedStats();
     return {
       visitedUrls: this.visitedUrls.size,
       maxDepth: this.maxDepth,
-      maxLinksPerPage: this.maxLinksPerPage
+      maxLinksPerPage: this.maxLinksPerPage,
+      visitedDetails: visitedStats
     };
   }
 
   // Reset crawler state
   reset() {
     this.visitedUrls.clear();
+  }
+
+  // Set target keywords for intelligent link discovery
+  setTargetKeywords(keywords) {
+    this.targetKeywords = keywords || [];
+  }
+
+  // Check if URL points to non-content (skip images, PDFs, etc.)
+  isNonContentUrl(url) {
+    const extensions = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|jpg|jpeg|png|gif|svg|mp4|mp3|avi)$/i;
+    return extensions.test(url);
+  }
+
+  // Check target keywords exist
+  containsTargetKeywords(linkUrl, linkText) {
+    if (!this.targetKeywords || this.targetKeywords.length === 0) {
+      return false;
+    }
+
+    const searchText = `${linkUrl} ${linkText}`.toLowerCase();
+    
+    return this.targetKeywords.some(keyword => {
+      const keywordLower = keyword.toLowerCase();
+      
+      // For multi-word keywords (phrases), check if all words are present
+      if (keyword.includes(' ')) {
+        const words = keywordLower.split(' ');
+        return words.every(word => searchText.includes(word));
+      }
+      
+      // For single words, direct match
+      return searchText.includes(keywordLower);
+    });
+  }
+
+  // Get visited URLs for debugging
+  getVisitedUrls() {
+    return Array.from(this.visitedUrls);
+  }
+
+  // Get visited URLs statistics
+  getVisitedStats() {
+    const urls = Array.from(this.visitedUrls);
+    const domains = [...new Set(urls.map(url => {
+      try {
+        return new URL(url).hostname;
+      } catch {
+        return 'invalid';
+      }
+    }))];
+    
+    return {
+      totalVisited: urls.length,
+      uniqueDomains: domains.length,
+      domains: domains,
+      recentUrls: urls.slice(-10) // Last 10 URLs visited
+    };
+  }
+
+  // Check for general content relevance
+  hasRelevantContent(linkText) {
+    // Generic patterns that indicate substantial content
+    const contentIndicators = [
+      /article|post|story|news|blog|page/i,
+      /about|profile|biography|history/i,
+      /analysis|research|report|study/i,
+      /guide|tutorial|how.*to|overview/i,
+      /policy|strategy|plan|initiative/i,
+      /announcement|press.*release|statement/i,
+      /\d{4}.*\d{2}.*\d{2}/, // Date patterns
+      /\w{20,}/ // Longer text likely to be substantial content
+    ];
+
+    return contentIndicators.some(pattern => pattern.test(linkText));
+  }
+
+  // Smart contextual relevance checking for Wikipedia links
+  isWikipediaRelevantLink(linkUrl, linkText) {
+    // Only apply to Wikipedia
+    if (!linkUrl.includes('wikipedia.org')) {
+      return false;
+    }
+
+    if (!this.targetKeywords || this.targetKeywords.length === 0) {
+      return false;
+    }
+
+    // For people searches, look for country/place connections
+    const personKeywords = this.targetKeywords.filter(keyword => 
+      keyword.split(' ').length > 1 && // Multi-word (likely person names)
+      !/venture|capital|investment|fund|company/i.test(keyword) // Not business terms
+    );
+
+    if (personKeywords.length > 0) {
+      // Check if this is a country/place link that might contain info about the person
+      const countryPlaces = [
+        'singapore', 'malaysia', 'thailand', 'indonesia', 'philippines', 
+        'vietnam', 'myanmar', 'laos', 'cambodia', 'brunei',
+        'asia', 'southeast', 'asean'
+      ];
+      
+      const linkTextLower = linkText.toLowerCase();
+      const linkUrlLower = linkUrl.toLowerCase();
+      
+      // If searching for a person and this is a country/place link, it's relevant
+      if (countryPlaces.some(place => 
+        linkTextLower.includes(place) || linkUrlLower.includes(place)
+      )) {
+        return true;
+      }
+
+      // Also check for government, politics, history links which often contain person info
+      const politicalTopics = [
+        'government', 'politics', 'prime minister', 'president', 'leader',
+        'history', 'founder', 'independence', 'parliament', 'ministry'
+      ];
+      
+      if (politicalTopics.some(topic => 
+        linkTextLower.includes(topic) || linkUrlLower.includes(topic)
+      )) {
+        return true;
+      }
+    }
+
+    // For business/investment terms, look for relevant economic/business links
+    const businessKeywords = this.targetKeywords.filter(keyword => 
+      /venture|capital|investment|fund|company|business|economic|finance/i.test(keyword)
+    );
+
+    if (businessKeywords.length > 0) {
+      const businessTopics = [
+        'economy', 'economic', 'business', 'industry', 'development',
+        'investment', 'finance', 'capital', 'venture', 'startup',
+        'technology', 'innovation', 'enterprise'
+      ];
+      
+      const linkTextLower = linkText.toLowerCase();
+      const linkUrlLower = linkUrl.toLowerCase();
+      
+      if (businessTopics.some(topic => 
+        linkTextLower.includes(topic) || linkUrlLower.includes(topic)
+      )) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 
