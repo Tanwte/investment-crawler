@@ -3,6 +3,8 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
+const https = require('https');
+const fs = require('fs');
 
 const { applySecurity } = require('./middleware/security');
 const { initAuth } = require('./db/initAuth');
@@ -59,7 +61,29 @@ const port = process.env.PORT || 3000;
 // In tests, we export app without listening.
 if (process.env.NODE_ENV !== 'test') {
   initAuth().then(() => {
-    app.listen(port, () => console.log(`Server on :${port}`));
+    // Start HTTP server
+    app.listen(port, () => console.log(`HTTP Server on :${port}`));
+    
+    // Start HTTPS server if SSL certificates exist
+    const keyPath = path.join(__dirname, 'ssl', 'localhost-key.pem');
+    const certPath = path.join(__dirname, 'ssl', 'localhost-cert.pem');
+    
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      const httpsPort = process.env.HTTPS_PORT || 3443;
+      const httpsOptions = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath)
+      };
+      
+      https.createServer(httpsOptions, app).listen(httpsPort, () => {
+        console.log(`HTTPS Server on :${httpsPort}`);
+        console.log(`🔒 Access via: https://localhost:${httpsPort}`);
+        console.log(`⚠️  Browser will show security warning - click "Advanced" → "Proceed to localhost"`);
+      });
+    } else {
+      console.log('ℹ️  HTTPS not available - SSL certificates not found');
+      console.log('   Run: node scripts/generate-ssl.js to create certificates');
+    }
   }).catch(err => {
     console.error('Init failed:', err);
     process.exit(1);

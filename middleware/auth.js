@@ -1,5 +1,4 @@
 const UserManager = require('../utils/userManager');
-const userManager = new UserManager();
 
 async function requireAuth(req, res, next) {
   try {
@@ -9,7 +8,7 @@ async function requireAuth(req, res, next) {
     }
 
     // Verify user still exists and is active
-    const user = await userManager.getUserById(req.session.user.id);
+    const user = await UserManager.getUserById(req.session.user.id);
     if (!user || !user.is_active || user.account_locked) {
       // Clear invalid session
       req.session.destroy();
@@ -17,7 +16,7 @@ async function requireAuth(req, res, next) {
     }
 
     // Update last activity
-    await userManager.updateLastActivity(user.id, req.ip, req.get('User-Agent'));
+    await UserManager.updateLastActivity(user.id, req.ip, req.get('User-Agent'));
     
     // Refresh user data in session
     req.session.user = user;
@@ -36,11 +35,11 @@ async function requireAdmin(req, res, next) {
     }
 
     // Verify user exists, is active, and has admin role
-    const user = await userManager.getUserById(req.session.user.id);
+    const user = await UserManager.getUserById(req.session.user.id);
     if (!user || !user.is_active || user.account_locked || user.role !== 'admin') {
       // Log unauthorized access attempt
       if (user) {
-        await userManager.logUserAction(user.id, 'UNAUTHORIZED_ADMIN_ACCESS', {
+        await UserManager.logUserAction(user.id, 'UNAUTHORIZED_ADMIN_ACCESS', {
           ip: req.ip,
           userAgent: req.get('User-Agent'),
           path: req.path
@@ -53,7 +52,7 @@ async function requireAdmin(req, res, next) {
     }
 
     // Update last activity and continue
-    await userManager.updateLastActivity(user.id, req.ip, req.get('User-Agent'));
+    await UserManager.updateLastActivity(user.id, req.ip, req.get('User-Agent'));
     req.session.user = user;
     return next();
   } catch (error) {
@@ -67,7 +66,7 @@ async function logUserAction(action, details = {}) {
   return async (req, res, next) => {
     if (req.session && req.session.user) {
       try {
-        await userManager.logUserAction(req.session.user.id, action, {
+        await UserManager.logUserAction(req.session.user.id, action, {
           ...details,
           ip: req.ip,
           userAgent: req.get('User-Agent'),
