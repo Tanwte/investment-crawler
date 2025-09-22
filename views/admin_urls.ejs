@@ -1,11 +1,115 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Edit URLs</title><link rel="stylesheet" href="/styles.css"></head>
-<body><header><h1>Edit URLs</h1><nav><a href="/admin">Back</a></nav></header>
-<main class="card" style="max-width:720px;margin:16px auto;">
-<% if(error){%><div class="error"><%= error %></div><%} %><% if(success){%><div class="success"><%= success %></div><%} %>
-<form method="POST" action="/admin/urls">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <p>One URL per line. Must be http(s). Required count: <strong><%= min %></strong> to <strong><%= max %></strong>.</p>
-  <textarea name="urls" rows="16"><%= currentText %></textarea>
-  <button type="submit">Save</button>
-</form>
-</main></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Edit URLs - Investment Crawler</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .edit-form {
+            background: #0f1630;
+            border: 1px solid #203065;
+            border-radius: 8px;
+            padding: 25px;
+        }
+        
+        .edit-form p {
+            color: #e8eefc;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .url-requirements {
+            background: rgba(245, 176, 66, 0.1);
+            border-left: 3px solid #f5b042;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .url-requirements strong {
+            color: #f5b042;
+        }
+        
+        .edit-form textarea {
+            width: 100%;
+            min-height: 400px;
+            background: #1a2a5a;
+            color: #e8eefc;
+            border: 1px solid #203065;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        
+        .edit-form textarea:focus {
+            outline: none;
+            border-color: #f5b042;
+            box-shadow: 0 0 0 2px rgba(245, 176, 66, 0.2);
+        }
+        
+        .save-button {
+            background: #f5b042;
+            color: #050a12;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+        }
+        
+        .save-button:hover {
+            background: #ffb347;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 176, 66, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔗 Edit URLs</h1>
+        <nav>
+            <a href="/admin">Dashboard</a>
+            <a href="/admin/keywords">Edit Keywords</a>
+            <a href="/admin/urls" class="active">Edit URLs</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/settings">Settings</a>
+            <a href="/">← Back to Results</a>
+            <form method="POST" action="/logout" style="display:inline;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button>Logout</button>
+            </form>
+        </nav>
+    </header>
+    
+    <div class="container">
+        <div class="edit-form">
+            <% if(error){%><div class="error"><%= error %></div><%} %>
+            <% if(success){%><div class="success"><%= success %></div><%} %>
+            
+            <div class="url-requirements">
+                <p>🌐 <strong>URL Requirements:</strong> One URL per line. Must be http(s). Required count: <strong><%= min %></strong> to <strong><%= max %></strong>.</p>
+            </div>
+            
+            <form method="POST" action="/admin/urls">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <p>📋 Enter seed URLs that will be crawled for content. These are your starting points for intelligence gathering.</p>
+                <textarea name="urls" rows="20" placeholder="Enter URLs here...&#10;Example:&#10;https://www.businesstimes.com.sg/&#10;https://biz.newdaily.co.kr/&#10;https://en.wikipedia.org/wiki/ASEAN"><%= currentText %></textarea>
+                <button type="submit" class="save-button">🔗 Save URLs</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

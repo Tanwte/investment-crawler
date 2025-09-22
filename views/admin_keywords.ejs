@@ -1,11 +1,113 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Edit Keywords</title><link rel="stylesheet" href="/styles.css"></head>
-<body><header><h1>Edit Keywords</h1><nav><a href="/admin">Back</a></nav></header>
-<main class="card" style="max-width:720px;margin:16px auto;">
-<% if(error){%><div class="error"><%= error %></div><%} %><% if(success){%><div class="success"><%= success %></div><%} %>
-<form method="POST" action="/admin/keywords">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <p>One keyword per line.</p>
-  <textarea name="keywords" rows="16"><%= currentText %></textarea>
-  <button type="submit">Save</button>
-</form>
-</main></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Edit Keywords - Investment Crawler</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .edit-form {
+            background: #0f1630;
+            border: 1px solid #203065;
+            border-radius: 8px;
+            padding: 25px;
+        }
+        
+        .edit-form p {
+            color: #e8eefc;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .edit-form textarea {
+            width: 100%;
+            min-height: 400px;
+            background: #1a2a5a;
+            color: #e8eefc;
+            border: 1px solid #203065;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        
+        .edit-form textarea:focus {
+            outline: none;
+            border-color: #f5b042;
+            box-shadow: 0 0 0 2px rgba(245, 176, 66, 0.2);
+        }
+        
+        .save-button {
+            background: #f5b042;
+            color: #050a12;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+        }
+        
+        .save-button:hover {
+            background: #ffb347;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 176, 66, 0.3);
+        }
+        
+        .back-nav {
+            margin-bottom: 20px;
+        }
+        
+        .back-nav a {
+            color: #f5b042;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .back-nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📝 Edit Keywords</h1>
+        <nav>
+            <a href="/admin">Dashboard</a>
+            <a href="/admin/keywords" class="active">Edit Keywords</a>
+            <a href="/admin/urls">Edit URLs</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/settings">Settings</a>
+            <a href="/">← Back to Results</a>
+            <form method="POST" action="/logout" style="display:inline;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button>Logout</button>
+            </form>
+        </nav>
+    </header>
+    
+    <div class="container">
+        <div class="edit-form">
+            <% if(error){%><div class="error"><%= error %></div><%} %>
+            <% if(success){%><div class="success"><%= success %></div><%} %>
+            
+            <form method="POST" action="/admin/keywords">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <p>📝 Enter one keyword per line. These keywords will be used to identify relevant content during crawling.</p>
+                <textarea name="keywords" rows="20" placeholder="Enter keywords here...&#10;Example:&#10;현대차&#10;Investment&#10;Singapore&#10;Trade Agreement"><%= currentText %></textarea>
+                <button type="submit" class="save-button">💾 Save Keywords</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

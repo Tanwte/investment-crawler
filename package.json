@@ -8,6 +8,14 @@
     "dev": "nodemon server.js",
     "test": "jest --runInBand --detectOpenHandles"
   },
+  "nodemonConfig": {
+    "ignore": [
+      "data/*",
+      "*.log",
+      "node_modules/*"
+    ],
+    "ext": "js,json,ejs"
+  },
   "jest": {
     "testEnvironment": "node",
     "setupFilesAfterEnv": [

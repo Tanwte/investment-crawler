@@ -3,11 +3,104 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Login</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <title>Login - Investment Crawler</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #050a12 0%, #0f1630 50%, #1a2a5a 100%);
+      color: #e8eefc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .login-container {
+      max-width: 420px;
+      width: 90%;
+      background: #0f1630;
+      border: 1px solid #203065;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    
+    .login-container h1 {
+      color: #f5b042;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2rem;
+      text-shadow: 0 0 20px rgba(245, 176, 66, 0.3);
+    }
+    
+    .error {
+      background: #d32f2f;
+      color: white;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    label {
+      display: block;
+      color: #e8eefc;
+      margin-bottom: 8px;
+      margin-top: 15px;
+      font-weight: 500;
+    }
+    
+    input[type="text"], input[type="password"], input[name="username"], input[name="password"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #203065;
+      border-radius: 6px;
+      background: #1a2a5a;
+      color: #e8eefc;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #f5b042;
+      box-shadow: 0 0 0 2px rgba(245, 176, 66, 0.2);
+    }
+    
+    button[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      background: #f5b042;
+      color: #050a12;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 25px;
+      transition: all 0.2s ease;
+    }
+    
+    button[type="submit"]:hover {
+      background: #ffb347;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 176, 66, 0.3);
+    }
+    
+    .footer {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      color: #9ad;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+  </style>
 </head>
 <body>
-  <div class="card" style="max-width:420px;margin:40px auto;">
+  <div class="login-container">
     <h1>Login</h1>
 
     <% if (typeof error !== 'undefined' && error) { %>
@@ -25,6 +118,10 @@
 
       <button type="submit">Sign in</button>
     </form>
+  </div>
+  
+  <div class="footer">
+    © 2025 Investment Crawler
   </div>
 </body>
 </html>

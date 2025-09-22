@@ -74,7 +74,7 @@
     
     .keyword-highlight {
       background: #f5b042;
-      color: #0b1020;
+      color: #050a12;
       padding: 2px 4px;
       border-radius: 3px;
       font-weight: bold;
@@ -86,7 +86,7 @@
       top: 16px;
       color: #666;
       font-size: 12px;
-      background: #0b1020;
+      background: #050a12;
       padding: 2px 6px;
       border-radius: 3px;
     }
@@ -144,11 +144,11 @@
 </head>
 <body>
   <header>
-    <h1>Detailed Results</h1>
+    <h1>🔍 Detailed Results</h1>
     <nav>
-      <a href="/admin">Admin</a>
-      <a href="/search?q=investment">Search</a>
-      <a href="/">Back to Overview</a>
+      <a href="/">📊 Results</a>
+      <a href="/admin">🔧 Admin</a>
+      <a href="/search?q=investment">🔎 Search</a>
       <form method="POST" action="/logout" style="display:inline;">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button>Logout</button>
@@ -188,7 +188,12 @@
       </div>
 
       <div class="keyword-section">
-        <% Object.entries(resultsByKeyword).forEach(([keyword, snippets]) => { %>
+        <% Object.entries(resultsByKeyword).forEach(([keyword, data]) => { %>
+          <%
+            // Handle both old format (array) and new format (object with snippets and highlighted)
+            const snippets = Array.isArray(data) ? data : data.snippets || [];
+            const highlighted = Array.isArray(data) ? null : data.highlighted || [];
+          %>
           <div class="keyword-header">
             <span class="keyword-name"><%= keyword %></span>
             <span class="match-count">(<%= snippets.length %> matches)</span>
@@ -197,7 +202,13 @@
             <% snippets.forEach((snippet, index) => { %>
               <div class="snippet">
                 <span class="snippet-number">#<%= index + 1 %></span>
-                <div><%- snippet.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), `<span class="keyword-highlight">${keyword}</span>`) %></div>
+                <div>
+                  <% if (highlighted && highlighted[index]) { %>
+                    <%- highlighted[index].highlighted %>
+                  <% } else { %>
+                    <%- snippet.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), `<span class="keyword-highlight">${keyword}</span>`) %>
+                  <% } %>
+                </div>
               </div>
             <% }) %>
           </div>

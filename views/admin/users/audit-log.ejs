@@ -8,9 +8,9 @@
     <style>
         .audit-container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
         .audit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-        .table th, .table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        .table th { background: #f8f9fa; font-weight: 600; position: sticky; top: 0; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; background: #6b7280; color: white; }
+        .table th, .table td { padding: 10px; text-align: left; border-bottom: 1px solid #9ca3af; }
+        .table th { background: #6b7280; color: white; font-weight: 600; position: sticky; top: 0; }
         .action-badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
         .action-login { background: #d4edda; color: #155724; }
         .action-logout { background: #f8d7da; color: #721c24; }
@@ -21,17 +21,17 @@
         .action-error { background: #f5c6cb; color: #721c24; }
         .details-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .details-cell:hover { white-space: normal; overflow: visible; }
-        .filter-section { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .filter-section { background: #6b7280; color: white; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
         .filter-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
-        .filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid #9ca3af; border-radius: 4px; background: #6b7280; color: white; }
         .btn-filter { background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
         .btn-clear { background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .stat-card { background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; text-align: center; }
+        .stat-card { background: #6b7280; color: white; padding: 15px; border-radius: 4px; border: 1px solid #9ca3af; text-align: center; }
         .stat-number { font-size: 24px; font-weight: bold; color: #007bff; }
         .pagination { text-align: center; margin-top: 20px; }
-        .pagination button { margin: 0 5px; padding: 8px 12px; border: 1px solid #ddd; background: white; cursor: pointer; }
+        .pagination button { margin: 0 5px; padding: 8px 12px; border: 1px solid #9ca3af; background: #6b7280; color: white; cursor: pointer; }
         .pagination button.active { background: #007bff; color: white; }
     </style>
 </head>
@@ -121,9 +121,9 @@
                             <tr class="audit-row" 
                                 data-username="<%= log.username || '' %>" 
                                 data-action="<%= log.action %>" 
-                                data-date="<%= new Date(log.created_at).toISOString().split('T')[0] %>">
+                                data-date="<%= new Date(log.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Singapore' }) %>">
                                 <td>
-                                    <%= new Date(log.created_at).toLocaleString() %>
+                                    <%= new Date(log.created_at).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' }) %>
                                 </td>
                                 <td>
                                     <strong><%= log.username || 'System' %></strong>
@@ -189,7 +189,7 @@
             <% } %>
         </div>
 
-        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 4px;">
+        <div style="margin-top: 30px; padding: 20px; background: #6b7280; color: white; border-radius: 4px;">
             <h3>About the Audit Log</h3>
             <p>The audit log tracks all user-related activities in the system, including:</p>
             <ul>
@@ -209,7 +209,10 @@
             const dateFromFilter = document.getElementById('dateFromFilter').value;
             const dateToFilter = document.getElementById('dateToFilter').value;
             
+            console.log('Filters applied:', { userFilter, actionFilter, dateFromFilter, dateToFilter });
+            
             const rows = document.querySelectorAll('.audit-row');
+            let hiddenCount = 0;
             
             rows.forEach(row => {
                 const username = row.dataset.username.toLowerCase();
@@ -218,14 +221,44 @@
                 
                 let show = true;
                 
-                if (userFilter && !username.includes(userFilter)) show = false;
-                if (actionFilter && !action.includes(actionFilter)) show = false;
-                if (dateFromFilter && date < dateFromFilter) show = false;
-                if (dateToFilter && date > dateToFilter) show = false;
+                // User filter - empty string means "All Users"
+                if (userFilter && userFilter.trim() !== '' && !username.includes(userFilter)) {
+                    show = false;
+                }
+                
+                // Action filter - empty string means "All Actions"
+                if (actionFilter && actionFilter.trim() !== '' && !action.includes(actionFilter)) {
+                    show = false;
+                }
+                
+                // Date filtering - convert to Singapore timezone
+                if (dateFromFilter || dateToFilter) {
+                    // Parse the row date as Singapore time
+                    const rowDate = new Date(date + 'T00:00:00+08:00'); // SGT timezone
+                    
+                    if (dateFromFilter) {
+                        const fromDate = new Date(dateFromFilter + 'T00:00:00+08:00'); // SGT timezone
+                        if (rowDate < fromDate) {
+                            show = false;
+                        }
+                    }
+                    
+                    if (dateToFilter) {
+                        const toDate = new Date(dateToFilter + 'T23:59:59+08:00'); // End of day in SGT
+                        if (rowDate > toDate) {
+                            show = false;
+                        }
+                    }
+                }
+                
+                if (!show) {
+                    hiddenCount++;
+                }
                 
                 row.style.display = show ? '' : 'none';
             });
             
+            console.log(`Filtered: ${hiddenCount} rows hidden, ${rows.length - hiddenCount} rows visible`);
             updateVisibleCount();
         }
 
@@ -251,12 +284,16 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            // Set default date range to last 30 days
+            // Set default date range to last 30 days (Singapore timezone)
             const today = new Date();
             const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
             
-            document.getElementById('dateFromFilter').value = thirtyDaysAgo.toISOString().split('T')[0];
-            document.getElementById('dateToFilter').value = today.toISOString().split('T')[0];
+            // Convert to Singapore timezone for date input
+            const todaySGT = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Singapore' });
+            const thirtyDaysAgoSGT = thirtyDaysAgo.toLocaleDateString('en-CA', { timeZone: 'Asia/Singapore' });
+            
+            document.getElementById('dateFromFilter').value = thirtyDaysAgoSGT;
+            document.getElementById('dateToFilter').value = todaySGT;
         });
     </script>
 </body>

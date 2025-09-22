@@ -1,0 +1,166 @@
+# INVESTMENT CRAWLER - PROJECT STRUCTURE
+# Generated on September 19, 2025
+# Repository: webCrawler (Owner: Twtedwin)
+
+==============================================================================
+COMPLETE PROJECT STRUCTURE
+==============================================================================
+
+investment-crawler/
+├── .env                                    # Environment variables (sensitive)
+├── .gitignore                              # Git ignore rules
+├── config.js                               # Main configuration file
+├── server.js                               # Main application server
+├── package.json                            # Node.js dependencies and scripts
+├── package-lock.json                       # Dependency lock file (auto-generated)
+├── visited-urls-demo.js                    # Demo script for URL tracking
+├── PROJECT_DOCUMENTATION.txt               # Basic project documentation
+├── COMPLETE_PROJECT_DOCUMENTATION.txt      # Comprehensive documentation
+│
+├── crawlers/                               # Web scraping engines
+│   ├── cheerioScraper-cleaned.js
+│   ├── cheerioScraper.js                  # Fast HTML parsing scraper
+│   ├── enhancedPuppeteerScraper.js        # Enhanced browser automation scraper
+│   └── puppeteerScraper.js                # Basic browser automation scraper
+│
+├── data/                                   # Configuration and backup data
+│   ├── keywords.json                      # Active keyword configurations
+│   ├── keywords-backup.json               # Keyword backup file
+│   ├── urls.json                          # Active URL configurations
+│   ├── urls-backup.json                   # URL backup file
+│   └── urls-new.json                      # New URL configurations
+│
+├── db/                                     # Database connection and operations
+│   ├── index.js                           # Main database connection and queries
+│   └── initAuth.js                        # Authentication system initialization
+│
+├── middleware/                             # Express.js middleware
+│   ├── auth.js                            # Authentication middleware
+│   ├── ratelimits.js                      # Rate limiting middleware
+│   ├── security.js                        # Security headers and CSP
+│   └── validation.js                      # Input validation middleware
+│
+├── migrations/                             # Database schema migrations
+│   └── create_tables.sql                  # Initial table creation script
+│
+├── public/                                 # Static frontend assets
+│   ├── styles.css                         # Main stylesheet
+│   └── admin.js                           # Client-side admin interface scripts
+│
+├── routes/                                 # Express.js route handlers
+│   ├── admin.js                           # Admin panel main routes
+│   ├── auth.js                            # Authentication routes (login/logout)
+│   ├── crawl.js                           # Crawling operation routes
+│   ├── dashboard.js                       # Dashboard and statistics routes
+│   ├── search.js                          # Search and results routes
+│   └── admin/                             # Admin sub-routes
+│       └── users.js                       # User management routes
+│
+├── scripts/                               # Utility and maintenance scripts
+│   ├── cleanup.js                         # Database cleanup utilities
+│   └── generate-ssl.js                    # SSL certificate generation
+│
+├── ssl/                                   # SSL certificates for HTTPS
+│   ├── localhost-cert.pem                 # SSL certificate file
+│   └── localhost-key.pem                  # SSL private key file
+│
+├── tests/                                 # Test files and mocks
+│   ├── test.js                            # Main test suite
+│   ├── testSetup.js                       # Test environment setup
+│   └── mocks/                             # Mock implementations for testing
+│       ├── axios.js                       # Mock HTTP client
+│       ├── axios-retry.js                 # Mock retry mechanism
+│       ├── csurf.js                       # Mock CSRF protection
+│       ├── db.js                          # Mock database operations
+│       ├── p-limit.js                     # Mock concurrency limiter
+│       ├── puppeteer.js                   # Mock browser automation
+│       ├── robots-parser.js               # Mock robots.txt parser
+│       └── sanitize-html.js               # Mock HTML sanitizer
+│
+├── utils/                                 # Core utility modules
+│   ├── deepLinkCrawler.js                 # Deep link discovery and crawling engine
+│   ├── phraseKeywordMatcher.js            # Advanced phrase-based keyword matching
+│   ├── seeds.js                           # Data seeding utilities
+│   ├── smartScraper.js                    # Intelligent scraping coordinator
+│   └── stealthConfig.js                   # Stealth browsing configurations
+│
+└── views/                                 # EJS template files for web interface
+    ├── index.ejs                          # Main dashboard interface
+    ├── admin.ejs                          # Admin panel dashboard
+    ├── admin_keywords.ejs                 # Keyword management interface
+    ├── admin_urls.ejs                     # URL management interface
+    ├── login.ejs                          # User login page
+    ├── result-detail.ejs                  # Detailed result view page
+    └── admin/                             # Admin sub-interfaces
+        └── users/                         # User management interfaces
+            ├── index.ejs                  # User list view
+            ├── create.ejs                 # User creation form
+            ├── edit.ejs                   # User editing form
+            ├── audit-log.ejs             # User activity audit log
+            └── reset-password.ejs        # Password reset form
+
+==============================================================================
+KEY COMPONENTS EXPLANATION
+==============================================================================
+
+CORE CRAWLING SYSTEM:
+- utils/deepLinkCrawler.js: Main crawling engine with depth-limited exploration
+- utils/smartScraper.js: Coordinates between different scraping strategies
+- crawlers/: Three-tier scraping approach (Cheerio → Enhanced Puppeteer → Puppeteer)
+- utils/phraseKeywordMatcher.js: Advanced keyword matching with phrase support
+
+WEB INTERFACE:
+- server.js: Express.js application server with HTTPS support
+- routes/: REST API endpoints for crawling, search, and administration
+- views/: EJS templates for web-based user interface
+- public/: Static assets (CSS, JavaScript, images)
+
+DATA MANAGEMENT:
+- db/: PostgreSQL database operations and connection management
+- data/: JSON configuration files for keywords and URLs
+- migrations/: Database schema definitions
+
+SECURITY & RELIABILITY:
+- middleware/: Authentication, rate limiting, input validation, security headers
+- ssl/: HTTPS certificates for secure communication
+- tests/: Comprehensive test suite with mocking
+
+ADMINISTRATION:
+- routes/admin/: User management and system administration
+- views/admin/: Administrative interface templates
+- scripts/: Maintenance and utility scripts
+
+==============================================================================
+TECHNOLOGY STACK
+==============================================================================
+
+Backend Framework: Express.js 5.1.0
+Database: PostgreSQL with pg driver
+View Engine: EJS templating
+Session Management: express-session with secure cookies
+Authentication: bcrypt password hashing
+
+Web Scraping:
+- Cheerio 1.1.2 (Fast HTML parsing)
+- Puppeteer 24.22.0 (Browser automation) 
+- puppeteer-extra with stealth plugin (Anti-detection)
+- axios 1.12.2 (HTTP requests)
+- axios-retry 3.9.1 (Request retry logic)
+
+Security:
+- Helmet 8.1.0 (Security headers)
+- CSURF 1.11.0 (CSRF protection)
+- express-rate-limit 8.1.0 (Rate limiting)
+- sanitize-html 2.17.0 (HTML sanitization)
+
+Development & Testing:
+- nodemon 3.1.10 (Development server)
+- Jest 29.7.0 (Testing framework)
+- supertest 6.3.4 (HTTP testing)
+
+Utilities:
+- dotenv 17.2.2 (Environment variables)
+- compression 1.8.1 (Response compression)
+- p-limit 3.1.0 (Concurrency control)
+- robots-parser 3.0.1 (robots.txt parsing)
+- user-agents 1.1.662 (User agent rotation)

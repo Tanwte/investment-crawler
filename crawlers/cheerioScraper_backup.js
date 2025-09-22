@@ -10,7 +10,6 @@ const {
 } = require('../utils/stealthConfig');
 const { extractWikipediaLinks } = require('../utils/linkExtractor');
 const { createEnhancedMatcher } = require('../utils/phraseKeywordMatcher');
-const { pickMainCheerio, cleanSnippetsFromText } = require('../utils/clean');
 
 axiosRetry(axios, { retries: 2, retryDelay: axiosRetry.exponentialDelay });
 
@@ -28,12 +27,10 @@ function buildRegexes(keywords) {
   });
 }
 
-// Enhanced extractMentions using both enhanced matching and content cleaning
+// Enhanced extractMentions using phrase-aware matching
 function extractMentions($, keywords) {
-  // Use the new content extraction system for cleaner content
-  const cleanedMainContent = pickMainCheerio($);
-  
-  // Extract additional metadata
+  // Extract text from multiple sources for better multilingual coverage
+  const bodyText = $('body').text();
   const titleText = $('title').text();
   const metaDescription = $('meta[name="description"]').attr('content') || '';
   const headings = $('h1, h2, h3, h4, h5, h6').map((i, el) => $(el).text()).get().join(' ');
@@ -60,15 +57,28 @@ function extractMentions($, keywords) {
     });
   }
   
-  // Combine cleaned main content with metadata
-  const fullText = [titleText, metaDescription, headings, carouselText, cleanedMainContent].join(' ');
+  // Combine all text sources including carousel content
+  const fullText = [titleText, metaDescription, headings, carouselText, bodyText].join(' ');
   
-  // Use the comprehensive cleaning system to extract clean snippets
-  const cleanSnippets = cleanSnippetsFromText(fullText, keywords);
+  // Normalize whitespace but preserve Unicode characters
+  const text = fullText.replace(/\s+/g, ' ').trim();
   
-  console.log(`🎯 Enhanced matching: ${cleanSnippets.length} mentions found (reduced redundancy)`);
+  // Use enhanced phrase-aware matching
+  const matcher = createEnhancedMatcher(keywords);
+  const mentions = matcher.extractMentions(text);
   
-  return cleanSnippets;
+  console.log(`🎯 Enhanced matching: ${mentions.length} mentions found (reduced redundancy)`);
+  
+  // Deduplicate via hash for additional safety
+  const seen = new Set();
+  return mentions.filter(snippet => {
+    if (!snippet || typeof snippet !== 'string' || snippet.length < 10) return false; // Only include meaningful snippets
+    
+    const h = hash(snippet);
+    if (seen.has(h)) return false;
+    seen.add(h);
+    return true;
+  });
 }
 
 module.exports = async function cheerioScraper(url, keywords, options = {}, retryCount = 0) {

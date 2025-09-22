@@ -1,77 +1,225 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Admin</title><link rel="stylesheet" href="/styles.css"></head>
-<body><header><h1>Admin</h1><nav>
-<a href="/dashboard">📊 Dashboard</a>
-<a href="/admin/keywords">Edit Keywords</a>
-<a href="/admin/urls">Edit URLs</a>
-<a href="/admin/users">Users</a>
-<a href="/admin/settings">Settings</a>
-<form method="POST" action="/logout" style="display:inline;"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button>Logout</button></form>
-</nav></header>
-<main class="card" style="max-width:720px;margin:16px auto;">
-<p>Signed in as: <strong><%= me.username %></strong> (<%= me.role %>)</p>
-<p>Keywords: <strong><%= keywordsCount %></strong></p>
-<p>Seed URLs: <strong><%= urlsCount %></strong> (min <%= minUrls %>, max <%= maxUrls %>)</p>
-</main>
-<section class="card" style="max-width:720px;margin:16px auto;">
-  <h2>Run Crawl</h2>
-  <p>Triggers the crawler now. This action is rate-limited and may take a while to finish.</p>
-  <form method="POST" action="/crawl">
-    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Admin - Investment Crawler</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .admin-info {
+            background: #0f1630;
+            border: 1px solid #203065;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .admin-info p {
+            margin: 8px 0;
+            color: #e8eefc;
+        }
+        
+        .admin-info strong {
+            color: #f5b042;
+        }
+        
+        .crawl-section {
+            background: #0f1630;
+            border: 1px solid #203065;
+            border-radius: 8px;
+            padding: 25px;
+        }
+        
+        .crawl-section h2 {
+            color: #f5b042;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .crawl-section h3 {
+            color: #e8eefc;
+            margin: 20px 0 15px 0;
+            font-size: 1.1rem;
+        }
+        
+        .option-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(26, 42, 90, 0.3);
+            border-radius: 6px;
+            border-left: 3px solid #f5b042;
+        }
+        
+        .option-group label {
+            color: #e8eefc;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .option-group input[type="checkbox"] {
+            margin: 0;
+        }
+        
+        .option-group select {
+            background: #1a2a5a;
+            color: #e8eefc;
+            border: 1px solid #203065;
+            border-radius: 4px;
+            padding: 6px 10px;
+            margin-left: 8px;
+        }
+        
+        .option-description {
+            font-size: 13px;
+            color: #9ad;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+        
+        .crawl-button {
+            background: #f5b042;
+            color: #050a12;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+        }
+        
+        .crawl-button:hover {
+            background: #ffb347;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 176, 66, 0.3);
+        }
+        
+        .intelligence-box {
+            margin-top: 25px;
+            padding: 20px;
+            background: rgba(15, 22, 48, 0.8);
+            border: 1px solid #203065;
+            border-radius: 8px;
+        }
+        
+        .intelligence-box h4 {
+            color: #f5b042;
+            margin: 0 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .intelligence-box ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #e8eefc;
+        }
+        
+        .intelligence-box li {
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔧 Admin Dashboard</h1>
+        <nav>
+            <a href="/admin" class="active">Dashboard</a>
+            <a href="/admin/keywords">Edit Keywords</a>
+            <a href="/admin/urls">Edit URLs</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/settings">Settings</a>
+            <a href="/">← Back to Results</a>
+            <form method="POST" action="/logout" style="display:inline;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button>Logout</button>
+            </form>
+        </nav>
+    </header>
     
-    <div style="margin-bottom: 16px;">
-      <h3>Crawl Options</h3>
-      
-      <div style="margin-bottom: 12px;">
-        <label>
-          <input type="checkbox" name="deepLinks" value="true" checked> 
-          Enable Deep Link Crawling
-        </label>
-        <small style="display: block; color: #666; margin-top: 4px;">
-          Follow article links to extract complete content (recommended for comprehensive intelligence gathering)
-        </small>
-      </div>
-      
-      <div style="margin-bottom: 12px;">
-        <label for="maxDepth">Max Crawl Depth:</label>
-        <select name="maxDepth" id="maxDepth" style="margin-left: 8px;">
-          <option value="1">1 level (seed URLs only)</option>
-          <option value="2" selected>2 levels (recommended)</option>
-          <option value="3">3 levels (thorough)</option>
-          <option value="4">4 levels (extensive)</option>
-        </select>
-        <small style="display: block; color: #666; margin-top: 4px;">
-          How many link levels to follow from seed URLs
-        </small>
-      </div>
-      
-      <div style="margin-bottom: 12px;">
-        <label for="maxLinksPerPage">Links per page:</label>
-        <select name="maxLinksPerPage" id="maxLinksPerPage" style="margin-left: 8px;">
-          <option value="3">3 links</option>
-          <option value="5" selected>5 links (recommended)</option>
-          <option value="10">10 links</option>
-          <option value="15">15 links (intensive)</option>
-        </select>
-        <small style="display: block; color: #666; margin-top: 4px;">
-          Maximum relevant links to follow from each page
-        </small>
-      </div>
+    <div class="container">
+        <div class="admin-info">
+            <% if(success){%><div class="success"><%= success %></div><%} %>
+            <p>Signed in as: <strong><%= me.username %></strong> (<%= me.role %>)</p>
+            <p>Keywords: <strong><%= keywordsCount %></strong></p>
+            <p>Seed URLs: <strong><%= urlsCount %></strong> (min <%= minUrls %>, max <%= maxUrls %>)</p>
+        </div>
+        
+        <div class="crawl-section">
+            <h2>🔄 Run Crawl</h2>
+            <p>Triggers the crawler now. This action is rate-limited and may take a while to finish.</p>
+            
+            <form method="POST" action="/crawl">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                
+                <h3>Crawl Options</h3>
+                
+                <div class="option-group">
+                    <label>
+                        <input type="checkbox" name="deepLinks" value="true" checked> 
+                        <strong>Enable Deep Link Crawling</strong>
+                    </label>
+                    <div class="option-description">
+                        Follow article links to extract complete content (recommended for comprehensive intelligence gathering)
+                    </div>
+                </div>
+                
+                <div class="option-group">
+                    <label for="maxDepth">
+                        <strong>Max Crawl Depth:</strong>
+                        <select name="maxDepth" id="maxDepth">
+                            <option value="1">1 level (seed URLs only)</option>
+                            <option value="2" selected>2 levels (recommended)</option>
+                            <option value="3">3 levels (thorough)</option>
+                            <option value="4">4 levels (extensive)</option>
+                        </select>
+                    </label>
+                    <div class="option-description">
+                        How many link levels to follow from seed URLs
+                    </div>
+                </div>
+                
+                <div class="option-group">
+                    <label for="maxLinksPerPage">
+                        <strong>Links per page:</strong>
+                        <select name="maxLinksPerPage" id="maxLinksPerPage">
+                            <option value="3">3 links</option>
+                            <option value="5" selected>5 links (recommended)</option>
+                            <option value="10">10 links</option>
+                            <option value="15">15 links (intensive)</option>
+                        </select>
+                    </label>
+                    <div class="option-description">
+                        Maximum relevant links to follow from each page
+                    </div>
+                </div>
+                
+                <button type="submit" class="crawl-button">
+                    🚀 Run Crawl Now
+                </button>
+            </form>
+            
+            <div class="intelligence-box">
+                <h4>🧠 Deep Link Intelligence:</h4>
+                <ul>
+                    <li>Extracts complete article content beyond headlines</li>
+                    <li>Follows related news and analysis links</li>
+                    <li>Captures metadata (author, date, publication)</li>
+                    <li>Ideal for Singapore-Korea trade relationship monitoring</li>
+                    <li>Respects robots.txt and implements polite crawling</li>
+                </ul>
+            </div>
+        </div>
     </div>
-    
-    <button type="submit" style="background: #007acc; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer;">
-      Run Crawl Now
-    </button>
-  </form>
-  
-  <div style="margin-top: 16px; padding: 12px; background: #f5f5f5; border-radius: 4px;">
-    <h4 style="margin: 0 0 8px 0;">Deep Link Intelligence:</h4>
-    <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #666;">
-      <li>Extracts complete article content beyond headlines</li>
-      <li>Follows related news and analysis links</li>
-      <li>Captures metadata (author, date, publication)</li>
-      <li>Ideal for Singapore-Korea trade relationship monitoring</li>
-      <li>Respects robots.txt and implements polite crawling</li>
-    </ul>
-  </div>
-</section>
-</body></html>
+</body>
+</html>

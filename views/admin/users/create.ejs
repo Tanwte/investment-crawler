@@ -8,14 +8,17 @@
     <style>
         .form-container { max-width: 600px; margin: 20px auto; padding: 0 20px; }
         .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: white; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #9ca3af; border-radius: 4px; font-size: 14px; background: #6b7280; color: white; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
         .btn-primary { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
         .btn-secondary { background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px; }
         .alert-danger { background: #f8d7da; color: #721c24; padding: 12px; margin-bottom: 20px; border-radius: 4px; border: 1px solid #f5c6cb; }
-        .password-requirements { background: #e7f3ff; padding: 15px; border-radius: 4px; margin-top: 10px; font-size: 14px; }
+        .password-requirements { background: #6b7280; color: white; padding: 15px; border-radius: 4px; margin-top: 10px; font-size: 14px; }
         .password-requirements ul { margin: 10px 0 0 20px; }
+        .card { background: #6b7280; color: white; }
+        h2, h3 { color: white; }
+        small { color: #d1d5db !important; }
     </style>
 </head>
 <body>
@@ -43,7 +46,7 @@
                     <label for="username">Username *</label>
                     <input type="text" id="username" name="username" required 
                            placeholder="Enter username" value="<%= typeof username !== 'undefined' ? username : '' %>">
-                    <small style="color: #666;">Must be unique. Used for login.</small>
+                    <small style="color: #d1d5db;">Must be unique. Used for login.</small>
                 </div>
 
                 <div class="form-group">
@@ -56,7 +59,7 @@
                     <label for="email">Email Address *</label>
                     <input type="email" id="email" name="email" required 
                            placeholder="Enter email address" value="<%= typeof email !== 'undefined' ? email : '' %>">
-                    <small style="color: #666;">Must be a valid email address.</small>
+                    <small style="color: #d1d5db;">Must be a valid email address.</small>
                 </div>
 
                 <div class="form-group">
@@ -80,7 +83,7 @@
                         <option value="user" <%= typeof role !== 'undefined' && role === 'user' ? 'selected' : '' %>>User - Regular access to crawler features</option>
                         <option value="admin" <%= typeof role !== 'undefined' && role === 'admin' ? 'selected' : '' %>>Admin - Full system access and user management</option>
                     </select>
-                    <small style="color: #666;">Admins can manage users and access all features.</small>
+                    <small style="color: #d1d5db;">Admins can manage users and access all features.</small>
                 </div>
 
                 <div style="margin-top: 30px;">

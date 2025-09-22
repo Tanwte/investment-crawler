@@ -16,14 +16,15 @@
         .status-active { background: #d4edda; color: #155724; }
         .status-inactive { background: #f8d7da; color: #721c24; }
         .status-locked { background: #fff3cd; color: #856404; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        .table th { background: #f8f9fa; font-weight: 600; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #6b7280; color: white; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #9ca3af; }
+        .table th { background: #6b7280; color: white; font-weight: 600; }
         .actions { display: flex; gap: 5px; }
         .alert { padding: 12px; margin-bottom: 20px; border-radius: 4px; }
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .card { background: #6b7280; color: white; }
     </style>
 </head>
 <body>
@@ -64,6 +65,12 @@
         <% if (typeof unlocked !== 'undefined') { %>
             <div class="alert alert-success">
                 User account has been unlocked successfully.
+            </div>
+        <% } %>
+        
+        <% if (typeof locked !== 'undefined') { %>
+            <div class="alert alert-warning">
+                User account has been locked successfully.
             </div>
         <% } %>
 
@@ -126,6 +133,11 @@
                                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                             <button type="submit" class="btn-secondary">Unlock</button>
                                         </form>
+                                    <% } else if (u.id !== user.id) { %>
+                                        <form method="POST" action="/admin/users/<%= u.id %>/lock" style="display: inline;">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <button type="submit" class="btn-danger" onclick="return confirm('Are you sure you want to lock user \'<%= u.username %>\'? They will not be able to log in.')">Lock</button>
+                                        </form>
                                     <% } %>
                                     
                                     <% if (u.id !== user.id) { %>
@@ -149,7 +161,7 @@
             <% } %>
         </div>
 
-        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 4px;">
+        <div style="margin-top: 30px; padding: 20px; background: #6b7280; color: white; border-radius: 4px;">
             <h3>User Management Statistics</h3>
             <div style="display: flex; gap: 30px;">
                 <div>
@@ -157,6 +169,9 @@
                 </div>
                 <div>
                     <strong>Active Users:</strong> <%= users.filter(u => u.is_active).length %>
+                </div>
+                <div>
+                    <strong>Inactive Users:</strong> <%= users.filter(u => !u.is_active).length %>
                 </div>
                 <div>
                     <strong>Admin Users:</strong> <%= users.filter(u => u.role === 'admin').length %>

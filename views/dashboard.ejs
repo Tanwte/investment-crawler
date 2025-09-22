@@ -252,6 +252,19 @@
   </style>
 </head>
 <body>
+  <header>
+    <h1>📊 Trade Intelligence Dashboard</h1>
+    <nav>
+      <a href="/">📋 Results</a>
+      <a href="/dashboard" class="active">📊 Dashboard</a>
+      <a href="/admin">🔧 Admin</a>
+      <form method="POST" action="/logout" style="display:inline;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button>Logout</button>
+      </form>
+    </nav>
+  </header>
+
   <div class="dashboard-container">
     <div class="dashboard-header">
       <h1>🇸🇬🤝🇰🇷 Singapore-Korea Trade Intelligence Dashboard</h1>

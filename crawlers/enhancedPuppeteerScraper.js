@@ -7,7 +7,9 @@ const {
   randomDelay, 
   exponentialBackoff
 } = require('../utils/stealthConfig');
+const { createEnhancedMatcher } = require('../utils/phraseKeywordMatcher');
 
+// Legacy function for backward compatibility
 function buildRegexes(keywords) {
   // Use Korean-aware word boundaries for better multilingual matching
   return keywords.map(k => {
@@ -16,18 +18,13 @@ function buildRegexes(keywords) {
   });
 }
 
-function extractMentions(text, regexes) {
-  const res = [];
-  for (const rx of regexes) {
-    rx.lastIndex = 0; // Reset regex position
-    let m;
-    while ((m = rx.exec(text))) {
-      const s = Math.max(0, m.index - contextChars);
-      const e = Math.min(text.length, m.index + m[0].length + contextChars);
-      res.push(text.slice(s, e).trim());
-    }
-  }
-  return Array.from(new Set(res));
+// Enhanced extractMentions using phrase-aware matching
+function extractMentions(text, keywords) {
+  const matcher = createEnhancedMatcher(keywords);
+  const mentions = matcher.extractMentions(text);
+  
+  console.log(`🎯 Enhanced Puppeteer matching: ${mentions.length} mentions found`);
+  return mentions;
 }
 
 // Enhanced browser instance pool for better resource management
@@ -296,8 +293,8 @@ module.exports = async function enhancedPuppeteerScraper(url, keywords, retryCou
     console.log(`📊 Extracted ${text.length} characters`);
     
     if (text.length > 100) { // Minimum threshold for valid content
-      const regexes = buildRegexes(keywords);
-      const mentions = extractMentions(text, regexes);
+      // Use enhanced phrase-aware matching
+      const mentions = extractMentions(text, keywords);
       
       console.log(`🎯 Found ${mentions.length} keyword mentions`);
       if (mentions.length > 0) {

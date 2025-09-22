@@ -7,7 +7,8 @@ module.exports = {
   crawlDelayMsPerHost: 1500,
   csp: {
     "default-src": ["'self'"],
-    "script-src": ["'self'"],
+    "script-src": ["'self' 'unsafe-inline'"],
+    "script-src-attr": ["'unsafe-inline'"],
     "style-src": ["'self' 'unsafe-inline'"],
     "img-src": ["'self' data:"],
     "connect-src": ["'self'"],

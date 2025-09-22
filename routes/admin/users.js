@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAdmin, logUserAction } = require('../../middleware/auth');
 const UserManager = require('../../utils/userManager');
+const { queryWithRetry } = require('../../utils/dbRetry');
 const csurf = require('csurf');
 
 // Apply CSRF protection and admin authentication to all routes
@@ -319,6 +320,53 @@ router.post('/:id/reset-password', express.urlencoded({ extended: false }), asyn
   }
 });
 
+// Lock user account
+router.post('/:id/lock', express.urlencoded({ extended: false }), async (req, res) => {
+  const userId = req.params.id;
+  
+  try {
+    // Prevent locking yourself
+    if (parseInt(userId) === req.session.user.id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot lock your own account' 
+      });
+    }
+
+    // Lock the account
+    await queryWithRetry(
+      `UPDATE users 
+       SET account_locked = true 
+       WHERE id = $1`,
+      [userId]
+    );
+
+    // Log the action
+    await UserManager.logUserAction(req.session.user.id, 'LOCK_ACCOUNT_SUCCESS', {
+      target_user_id: userId,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.redirect('/admin/users?locked=true');
+  } catch (error) {
+    console.error('Error locking account:', error);
+    
+    // Log the failed attempt
+    await UserManager.logUserAction(req.session.user.id, 'LOCK_ACCOUNT_FAILED', {
+      target_user_id: userId,
+      error: error.message,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
 // Unlock user account
 router.post('/:id/unlock', express.urlencoded({ extended: false }), async (req, res) => {
   const userId = req.params.id;
@@ -329,7 +377,7 @@ router.post('/:id/unlock', express.urlencoded({ extended: false }), async (req, 
     });
 
     // Also reset failed attempts and unlock account
-    await UserManager.query(
+    await queryWithRetry(
       `UPDATE users 
        SET failed_login_attempts = 0, account_locked = false 
        WHERE id = $1`,

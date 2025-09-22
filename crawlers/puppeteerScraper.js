@@ -7,7 +7,10 @@ const {
   randomDelay, 
   exponentialBackoff
 } = require('../utils/stealthConfig');
+const { createEnhancedMatcher } = require('../utils/phraseKeywordMatcher');
+const { cleanSnippetsFromText } = require('../utils/clean');
 
+// Legacy function for backward compatibility
 function buildRegexes(keywords) {
   // Use Korean-aware word boundaries for better multilingual matching
   return keywords.map(k => {
@@ -15,18 +18,14 @@ function buildRegexes(keywords) {
     return new RegExp(`(?:^|\\s|[^가-힣a-zA-Z0-9])${escaped}(?=\\s|[^가-힣a-zA-Z0-9]|$)`, 'gi');
   });
 }
-function extractMentions(text, regexes) {
-  const res = [];
-  for (const rx of regexes) {
-    rx.lastIndex = 0; // Reset regex position
-    let m;
-    while ((m = rx.exec(text))) {
-      const s = Math.max(0, m.index - contextChars);
-      const e = Math.min(text.length, m.index + m[0].length + contextChars);
-      res.push(text.slice(s, e).trim());
-    }
-  }
-  return Array.from(new Set(res));
+
+// Enhanced extractMentions using both enhanced matching and content cleaning
+function extractMentions(text, keywords) {
+  // Use the comprehensive cleaning system to extract clean snippets
+  const cleanSnippets = cleanSnippetsFromText(text, keywords);
+  
+  console.log(`🎯 Puppeteer enhanced matching: ${cleanSnippets.length} mentions found`);
+  return cleanSnippets;
 }
 
 module.exports = async function puppeteerScraper(url, keywords, retryCount = 0) {
@@ -123,10 +122,8 @@ module.exports = async function puppeteerScraper(url, keywords, retryCount = 0) 
     if (text.length > 0) {
       console.log(`Sample text: ${text.substring(0, 100)}...`);
       
-      const regexes = buildRegexes(keywords);
-      console.log(`Built ${regexes.length} regexes`);
-      
-      const mentions = extractMentions(text, regexes);
+      // Use enhanced phrase-aware matching
+      const mentions = extractMentions(text, keywords);
       console.log(`Found ${mentions.length} mentions`);
       
       return mentions;

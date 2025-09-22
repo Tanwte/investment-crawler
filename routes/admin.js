@@ -23,7 +23,11 @@ router.use((req, res, next) => {
 });
 
 router.use(requireAuth);
-router.use(csurf({ cookie: true }));
+router.use(csurf({ 
+  cookie: true,
+  // Skip CSRF for GET requests as they should be idempotent
+  ignoreMethods: ['GET', 'HEAD', 'OPTIONS']
+}));
 router.use((req, res, next) => { res.locals.csrfToken = req.csrfToken(); next(); });
 
 // Mount user management routes
@@ -31,12 +35,16 @@ router.use('/admin/users', userRoutes);
 
 // Admin home
 router.get('/admin', (req, res) => {
+  // Get and clear any flash message from session
+  const success = req.session.flashMessage || null;
+  delete req.session.flashMessage;
   res.render('admin', {
     me: req.session.user,
     urlsCount: getUrls().length,
     keywordsCount: getKeywords().length,
     minUrls: MIN_URLS,
-    maxUrls: MAX_URLS
+    maxUrls: MAX_URLS,
+    success
   });
 });
 
@@ -56,9 +64,9 @@ router.post('/admin/keywords', requireAdmin, express.urlencoded({ extended: fals
   try {
     writeJsonAtomic(KEYWORDS_PATH, clean);
     reloadSeeds();
-    // Store success message in session and redirect
+    // Store success message in session and redirect to admin dashboard
     req.session.flashMessage = `Saved ${clean.length} keyword(s).`;
-    res.redirect('/admin/keywords');
+    res.redirect('/admin');
   } catch (e) {
     res.status(422).render('admin_keywords', { currentText: raw, error: e.message, success: null });
   }
@@ -81,9 +89,9 @@ router.post('/admin/urls', requireAdmin, express.urlencoded({ extended: false })
   try {
     writeJsonAtomic(URLS_PATH, clean);
     reloadSeeds();
-    // Store success message in session and redirect
+    // Store success message in session and redirect to admin dashboard
     req.session.flashMessage = `Saved ${clean.length} URL(s).`;
-    res.redirect('/admin/urls');
+    res.redirect('/admin');
   } catch (e) {
     res.status(422).render('admin_urls', { currentText: raw, min: MIN_URLS, max: MAX_URLS, error: e.message, success: null });
   }

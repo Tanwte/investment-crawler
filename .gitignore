@@ -60,3 +60,16 @@ Thumbs.db
 # Temporary files
 *.tmp
 .tmp/
+
+# Temporary test and debug files
+test-*.js
+debug-*.js
+demo-*.js
+check-*.js
+quick-test.js
+
+# Allow working demos
+!visited-urls-demo.js
+
+# Temporary migration files
+migrations.sql
